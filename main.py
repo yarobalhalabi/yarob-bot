@@ -3,36 +3,23 @@ keep_alive()
 
 import telebot
 from telebot import types
-import json
-import os
 
-BOT_TOKEN = '8083003172:AAFAkfpg9D6ZgqjtEsKCM5khqCYK2QHeTGM'
+BOT_TOKEN = '8083535737:AAGqZ44PUyl5egPU-OVyl4_AngOZHwN7ZaA'
 ADMIN_ID = 7188219652
 
-STATE_FILE = "bot_state.json"
+BOT_ACTIVE = True
 
-def load_bot_state():
-    if os.path.exists(STATE_FILE):
-        with open(STATE_FILE, "r") as f:
-            data = json.load(f)
-            return data.get("active", False)
-    return False
-
-def save_bot_state(active):
-    with open(STATE_FILE, "w") as f:
-        json.dump({"active": active}, f)
-
-BOT_ACTIVE = load_bot_state()
 bot = telebot.TeleBot(BOT_TOKEN)
 user_data = {}
 
 prices_pubg = {
-    "60": "10,000 S.P",
-    "120": "20,000 S.P",
-    "325": "50,000 S.P",
-    "660": "97,000 S.P",
-    "1800": "250,000 S.P",
-    "3850": "500,000 S.P"
+    "60": "9,500 S.P",
+    "120": "19,000 S.P",
+    "180": "28,500 S.P",
+    "325": "47,000 S.P",
+    "660": "92,000 S.P",
+    "1800": "240,000 S.P",
+    "3850": "480,000 S.P"
 }
 
 prices_freefire = {
@@ -44,16 +31,18 @@ prices_freefire = {
 
 @bot.message_handler(commands=['on'])
 def activate_bot(message):
+    global BOT_ACTIVE
     if message.from_user.id == ADMIN_ID:
-        save_bot_state(True)
+        BOT_ACTIVE = True
         bot.send_message(message.chat.id, "✅ تم تفعيل البوت.")
     else:
         bot.send_message(message.chat.id, "🚫 هذا الأمر مخصص للإدارة فقط.")
 
 @bot.message_handler(commands=['off'])
 def deactivate_bot(message):
+    global BOT_ACTIVE
     if message.from_user.id == ADMIN_ID:
-        save_bot_state(False)
+        BOT_ACTIVE = False
         bot.send_message(message.chat.id, "⛔ تم إيقاف البوت.")
     else:
         bot.send_message(message.chat.id, "🚫 هذا الأمر مخصص للإدارة فقط.")
@@ -77,7 +66,7 @@ def send_welcome(message):
 @bot.callback_query_handler(func=lambda call: call.data in ["pubg", "freefire"])
 def choose_game(call):
     user_id = call.from_user.id
-    user_data[user_id]['game'] = call.data
+    user_data[user_id] = {'game': call.data}
 
     if call.data == "pubg":
         prices = prices_pubg
@@ -102,14 +91,8 @@ def handle_selection(call):
     game = user_data[user_id]['game']
     amount = call.data
 
-    if game == "pubg":
-        prices = prices_pubg
-        price_label = "شدة"
-    else:
-        prices = prices_freefire
-        price_label = "جوهره"
-
-    user_data[user_id] = {'amount': amount, 'game': game}
+    prices = prices_pubg if game == "pubg" else prices_freefire
+    user_data[user_id].update({'amount': amount})
 
     payment_text = (
         f"💰 السعر: {prices[amount]}\n\n"
