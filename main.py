@@ -75,9 +75,7 @@ def send_welcome(message):
 
     user_data[user_id] = {}
 
-    welcome_text = "👋 أهلاً بك في متجر YAROB لشحن الألعاب 💳
-
-"                    "🔽 اختر اللعبة التي ترغب بشحنها:"
+    welcome_text = "👋 أهلاً بك في متجر YAROB لشحن الألعاب 💳\nاختر اللعبة التي ترغب بشحنها ⬇️"
     markup = types.InlineKeyboardMarkup()
     markup.add(
         types.InlineKeyboardButton("📱 PUBG", callback_data="pubg"),
