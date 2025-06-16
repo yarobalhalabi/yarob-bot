@@ -6,7 +6,7 @@ from telebot import types
 import json
 import os
 
-BOT_TOKEN = '8083535737:AAGqZ44PUyl5egPU-OVyl4_AngOZHwN7ZaA'
+BOT_TOKEN = '8083003172:AAFAkfpg9D6ZgqjtEsKCM5khqCYK2QHeTGM'
 ADMIN_ID = 7188219652
 
 STATE_FILE = "bot_state.json"
