@@ -1,4 +1,3 @@
-
 from keep_alive import keep_alive
 keep_alive()
 
@@ -67,6 +66,8 @@ def send_welcome(message):
 
 @bot.callback_query_handler(func=lambda call: call.data in ["pubg", "freefire"])
 def choose_game(call):
+    if not BOT_ACTIVE:
+        return
     user_id = call.from_user.id
     user_data[user_id] = {'game': call.data}
 
@@ -90,6 +91,8 @@ def choose_game(call):
 
 @bot.callback_query_handler(func=lambda call: call.data in prices_pubg or call.data in prices_freefire)
 def handle_selection(call):
+    if not BOT_ACTIVE:
+        return
     user_id = call.from_user.id
     game = user_data[user_id]['game']
     amount = call.data
@@ -110,9 +113,11 @@ def handle_selection(call):
     bot.register_next_step_handler_by_chat_id(user_id, get_transaction_number)
 
 def get_transaction_number(message):
+    if not BOT_ACTIVE:
+        return
     user_id = message.from_user.id
-    if not message.text.strip().isalnum():
-        bot.send_message(user_id, "❌ يرجى إدخال رقم عملية صحيح بدون رموز غريبة.")
+    if not message.text.strip().isdigit():
+        bot.send_message(user_id, "❌ يرجى إدخال رقم عملية صحيح (أرقام فقط).")
         return bot.register_next_step_handler_by_chat_id(user_id, get_transaction_number)
 
     user_data[user_id]['transaction_number'] = message.text
@@ -120,6 +125,8 @@ def get_transaction_number(message):
     bot.register_next_step_handler_by_chat_id(user_id, get_amount)
 
 def get_amount(message):
+    if not BOT_ACTIVE:
+        return
     user_id = message.from_user.id
     if not message.text.strip().isdigit():
         bot.send_message(user_id, "❌ يرجى إدخال المبلغ كرقم فقط بدون رموز.")
@@ -130,6 +137,8 @@ def get_amount(message):
     bot.register_next_step_handler_by_chat_id(user_id, get_game_id)
 
 def get_game_id(message):
+    if not BOT_ACTIVE:
+        return
     user_id = message.from_user.id
     if not message.text.strip().isalnum():
         bot.send_message(user_id, "❌ يرجى إدخال ID صالح (بدون رموز أو فراغات).")
@@ -183,10 +192,13 @@ def fail_delivery(call):
 
 @bot.callback_query_handler(func=lambda call: call.data == 'retry')
 def retry_order(call):
-    send_welcome(call.message)
+    if BOT_ACTIVE:
+        send_welcome(call.message)
 
 @bot.callback_query_handler(func=lambda call: call.data == 'cancel')
 def cancel_order(call):
+    if not BOT_ACTIVE:
+        return
     user_id = call.from_user.id
     user_data.pop(user_id, None)
     bot.send_message(user_id, "✅ تم إلغاء الطلب بنجاح.")
