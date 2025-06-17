@@ -74,7 +74,7 @@ def send_welcome(message):
 
     clear_user_data(user_id)
     user_data[user_id] = {}
-    welcome_text = " أهلاً بك في متجر YAROB لشحن الألعاب 
+    welcome_text = " أهلاً بك في متجر YAROB لشحن الألعاب "
  اختر اللعبة التي ترغب بشحنها:"
     markup = types.InlineKeyboardMarkup()
     markup.add(
