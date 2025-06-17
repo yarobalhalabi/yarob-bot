@@ -1,4 +1,3 @@
-
 from keep_alive import keep_alive
 keep_alive()
 
@@ -12,7 +11,7 @@ BOT_ACTIVE = True
 
 bot = telebot.TeleBot(BOT_TOKEN)
 user_data = {}
-user_messages = {}  # لتخزين معرف الرسائل لكل مستخدم
+user_messages = {}
 
 prices_pubg = {
     "60": "9,500 S.P",
@@ -75,7 +74,8 @@ def send_welcome(message):
 
     clear_user_data(user_id)
     user_data[user_id] = {}
-    welcome_text = "👋 أهلاً بك في متجر YAROB لشحن الألعاب 💳\n🔽 اختر اللعبة التي ترغب بشحنها:"
+    welcome_text = "👋 أهلاً بك في متجر YAROB لشحن الألعاب 💳
+🔽 اختر اللعبة التي ترغب بشحنها:"
     markup = types.InlineKeyboardMarkup()
     markup.add(
         types.InlineKeyboardButton("📱 PUBG", callback_data="pubg"),
@@ -117,10 +117,16 @@ def handle_selection(call):
     user_data[user_id].update({'amount': amount})
 
     payment_text = (
-        f"💰 السعر: {prices[amount]}\n\n"
-        f"📱 يرجى التحويل عبر سيرياتيل كاش (تحويل يدوي) إلى أحد الأرقام التالية:\n"
-        f"• 16954304\n"
-        f"• 81827789\n\n"
+        f"💰 السعر: {prices[amount]}
+
+"
+        f"📱 يرجى التحويل عبر سيرياتيل كاش (تحويل يدوي) إلى أحد الأرقام التالية:
+"
+        f"• 16954304
+"
+        f"• 81827789
+
+"
         f"بعد التحويل، أرسل رقم العملية:"
     )
     msg = bot.send_message(user_id, payment_text)
@@ -129,6 +135,10 @@ def handle_selection(call):
 
 def get_transaction_number(message):
     user_id = message.from_user.id
+    if not message.text.isdigit():
+        msg = bot.send_message(user_id, "⚠️ الرجاء إدخال رقم العملية بشكل رقمي فقط.")
+        track_message(msg)
+        return bot.register_next_step_handler_by_chat_id(user_id, get_transaction_number)
     user_data[user_id]['transaction_number'] = message.text
     msg = bot.send_message(user_id, "💸 أرسل الآن المبلغ الذي قمت بتحويله:")
     track_message(msg)
@@ -136,6 +146,10 @@ def get_transaction_number(message):
 
 def get_amount(message):
     user_id = message.from_user.id
+    if not message.text.isdigit():
+        msg = bot.send_message(user_id, "⚠️ الرجاء إدخال المبلغ بشكل رقمي فقط.")
+        track_message(msg)
+        return bot.register_next_step_handler_by_chat_id(user_id, get_amount)
     user_data[user_id]['transferred_amount'] = message.text
     msg = bot.send_message(user_id, "🎮 أرسل الآن ID حسابك داخل اللعبة:")
     track_message(msg)
@@ -143,16 +157,27 @@ def get_amount(message):
 
 def get_game_id(message):
     user_id = message.from_user.id
+    if not message.text.isdigit():
+        msg = bot.send_message(user_id, "⚠️ الرجاء إدخال ID اللعبة بشكل رقمي فقط.")
+        track_message(msg)
+        return bot.register_next_step_handler_by_chat_id(user_id, get_game_id)
+
     data = user_data[user_id]
     data['game_id'] = message.text
 
     final_message = (
-        f"🆕 طلب شحن جديد:\n"
-        f"👤 المستخدم: @{message.from_user.username or 'بدون يوزر'}\n"
-        f"🆔 تيليجرام: {user_id}\n"
-        f"🎮 ID اللعبة: {data['game_id']}\n"
-        f"🎯 الكمية: {data['amount']} {data['game']}\n"
-        f"💵 المبلغ: {data['transferred_amount']}\n"
+        f"🆕 طلب شحن جديد:
+"
+        f"👤 المستخدم: @{message.from_user.username or 'بدون يوزر'}
+"
+        f"🆔 تيليجرام: {user_id}
+"
+        f"🎮 ID اللعبة: {data['game_id']}
+"
+        f"🎯 الكمية: {data['amount']} {data['game']}
+"
+        f"💵 المبلغ: {data['transferred_amount']}
+"
         f"🔢 رقم العملية: {data['transaction_number']}"
     )
 
@@ -194,12 +219,14 @@ def fail_delivery(call):
     user_id = int(call.data.split("_")[1])
     markup = types.InlineKeyboardMarkup()
     markup.add(types.InlineKeyboardButton("🔄 إعادة المحاولة", callback_data='retry'))
-    fail_text = "❌ فشلت العملية\nيرجى التأكد من صحة المعلومات وإعادة المحاولة."
+    fail_text = "❌ فشلت العملية
+يرجى التأكد من صحة المعلومات وإعادة المحاولة."
     bot.send_message(user_id, fail_text, reply_markup=markup)
     bot.answer_callback_query(call.id, "تم إعلام العميل بفشل العملية.")
 
 @bot.callback_query_handler(func=lambda call: call.data == 'retry')
 def retry_order(call):
+    clear_user_data(call.from_user.id)
     send_welcome(call.message)
 
 bot.infinity_polling()
