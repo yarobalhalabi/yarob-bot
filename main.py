@@ -1,3 +1,4 @@
+
 from keep_alive import keep_alive
 keep_alive()
 
@@ -59,8 +60,9 @@ def send_welcome(message):
     markup = types.InlineKeyboardMarkup()
     markup.add(
         types.InlineKeyboardButton("📱 PUBG", callback_data="pubg"),
-        types.InlineKeyboardButton("🎮 Free Fire", callback_data="freefire")
+        types.InlineKeyboardButton("🎮 Free Fire", callback_data="freefire"),
     )
+    markup.add(types.InlineKeyboardButton("❌ إلغاء الطلب", callback_data="cancel"))
     bot.send_message(user_id, welcome_text, reply_markup=markup)
 
 @bot.callback_query_handler(func=lambda call: call.data in ["pubg", "freefire"])
@@ -83,6 +85,7 @@ def choose_game(call):
         markup.add(
             types.InlineKeyboardButton(f"{amount} {price_label} - {price}", callback_data=amount)
         )
+    markup.add(types.InlineKeyboardButton("❌ إلغاء الطلب", callback_data="cancel"))
     bot.send_message(user_id, welcome_text, reply_markup=markup)
 
 @bot.callback_query_handler(func=lambda call: call.data in prices_pubg or call.data in prices_freefire)
@@ -101,23 +104,37 @@ def handle_selection(call):
         f"• 81827789\n\n"
         f"بعد التحويل، أرسل رقم العملية:"
     )
-    bot.send_message(user_id, payment_text)
+    markup = types.InlineKeyboardMarkup()
+    markup.add(types.InlineKeyboardButton("❌ إلغاء الطلب", callback_data="cancel"))
+    bot.send_message(user_id, payment_text, reply_markup=markup)
     bot.register_next_step_handler_by_chat_id(user_id, get_transaction_number)
 
 def get_transaction_number(message):
     user_id = message.from_user.id
+    if not message.text.strip().isalnum():
+        bot.send_message(user_id, "❌ يرجى إدخال رقم عملية صحيح بدون رموز غريبة.")
+        return bot.register_next_step_handler_by_chat_id(user_id, get_transaction_number)
+
     user_data[user_id]['transaction_number'] = message.text
     bot.send_message(user_id, "💸 أرسل الآن المبلغ الذي قمت بتحويله:")
     bot.register_next_step_handler_by_chat_id(user_id, get_amount)
 
 def get_amount(message):
     user_id = message.from_user.id
+    if not message.text.strip().isdigit():
+        bot.send_message(user_id, "❌ يرجى إدخال المبلغ كرقم فقط بدون رموز.")
+        return bot.register_next_step_handler_by_chat_id(user_id, get_amount)
+
     user_data[user_id]['transferred_amount'] = message.text
     bot.send_message(user_id, "🎮 أرسل الآن ID حسابك داخل اللعبة:")
     bot.register_next_step_handler_by_chat_id(user_id, get_game_id)
 
 def get_game_id(message):
     user_id = message.from_user.id
+    if not message.text.strip().isalnum():
+        bot.send_message(user_id, "❌ يرجى إدخال ID صالح (بدون رموز أو فراغات).")
+        return bot.register_next_step_handler_by_chat_id(user_id, get_game_id)
+
     data = user_data[user_id]
     data['game_id'] = message.text
 
@@ -147,6 +164,7 @@ def confirm_delivery(call):
         return
 
     user_id = int(call.data.split("_")[1])
+    user_data.pop(user_id, None)
     bot.send_message(user_id, "✅ تم تنفيذ عملية الشحن بنجاح! شكراً لتعاملك معنا 🌟")
     bot.answer_callback_query(call.id, "تم إعلام العميل.")
 
@@ -166,5 +184,11 @@ def fail_delivery(call):
 @bot.callback_query_handler(func=lambda call: call.data == 'retry')
 def retry_order(call):
     send_welcome(call.message)
+
+@bot.callback_query_handler(func=lambda call: call.data == 'cancel')
+def cancel_order(call):
+    user_id = call.from_user.id
+    user_data.pop(user_id, None)
+    bot.send_message(user_id, "✅ تم إلغاء الطلب بنجاح.")
 
 bot.infinity_polling()
