@@ -3,12 +3,12 @@ keep_alive()
 
 import telebot
 from telebot import types
+import re
 
 BOT_TOKEN = '8083003172:AAFAkfpg9D6ZgqjtEsKCM5khqCYK2QHeTGM'
 ADMIN_ID = 7188219652
 
 BOT_ACTIVE = True
-
 bot = telebot.TeleBot(BOT_TOKEN)
 user_data = {}
 
@@ -28,6 +28,9 @@ prices_freefire = {
     "572": "55,000 S.P",
     "1266": "110,000 S.P"
 }
+
+def has_english_letters(text):
+    return bool(re.search(r'[A-Za-z]', text))
 
 @bot.message_handler(commands=['on'])
 def activate_bot(message):
@@ -54,6 +57,7 @@ def send_welcome(message):
         bot.send_message(user_id, "🚫 البوت متوقف حالياً، شكراً لتفهمكم ❤️")
         return
 
+    # حذف الطلب السابق والبدء من جديد
     user_data[user_id] = {}
     welcome_text = "👋 أهلاً بك في متجر YAROB لشحن الألعاب 💳\n🔽 اختر اللعبة التي ترغب بشحنها:"
     markup = types.InlineKeyboardMarkup()
@@ -71,21 +75,14 @@ def choose_game(call):
     user_id = call.from_user.id
     user_data[user_id] = {'game': call.data}
 
-    if call.data == "pubg":
-        prices = prices_pubg
-        game_name = "PUBG"
-        price_label = "شدة"
-    else:
-        prices = prices_freefire
-        game_name = "Free Fire"
-        price_label = "جوهره"
+    prices = prices_pubg if call.data == "pubg" else prices_freefire
+    game_name = "PUBG" if call.data == "pubg" else "Free Fire"
+    price_label = "شدة" if call.data == "pubg" else "جوهره"
 
     welcome_text = f"🔽 اختر كمية {price_label} التي ترغب بشرائها ل {game_name}:"
     markup = types.InlineKeyboardMarkup()
     for amount, price in prices.items():
-        markup.add(
-            types.InlineKeyboardButton(f"{amount} {price_label} - {price}", callback_data=amount)
-        )
+        markup.add(types.InlineKeyboardButton(f"{amount} {price_label} - {price}", callback_data=amount))
     markup.add(types.InlineKeyboardButton("❌ إلغاء الطلب", callback_data="cancel"))
     bot.send_message(user_id, welcome_text, reply_markup=markup)
 
@@ -116,11 +113,13 @@ def get_transaction_number(message):
     if not BOT_ACTIVE:
         return
     user_id = message.from_user.id
-    if not message.text.strip().isdigit():
-        bot.send_message(user_id, "❌ يرجى إدخال رقم عملية صحيح (أرقام فقط).")
+    txn = message.text.strip()
+
+    if not txn.isdigit() or has_english_letters(txn):
+        bot.send_message(user_id, "❌ رقم العملية غير صحيح. يرجى إدخاله بدون أي أحرف.")
         return bot.register_next_step_handler_by_chat_id(user_id, get_transaction_number)
 
-    user_data[user_id]['transaction_number'] = message.text
+    user_data[user_id]['transaction_number'] = txn
     bot.send_message(user_id, "💸 أرسل الآن المبلغ الذي قمت بتحويله:")
     bot.register_next_step_handler_by_chat_id(user_id, get_amount)
 
