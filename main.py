@@ -1,4 +1,3 @@
-
 from keep_alive import keep_alive
 keep_alive()
 
@@ -31,12 +30,8 @@ prices_freefire = {
     "1266": "110,000 S.P"
 }
 
-def store_message(user_id, msg):
-    if user_id not in user_messages:
-        user_messages[user_id] = []
-    user_messages[user_id].append(msg.message_id)
-
-def clear_messages(user_id):
+def clear_user_data(user_id):
+    user_data.pop(user_id, None)
     if user_id in user_messages:
         for msg_id in user_messages[user_id]:
             try:
@@ -44,6 +39,12 @@ def clear_messages(user_id):
             except:
                 pass
         user_messages[user_id] = []
+
+def track_message(msg):
+    user_id = msg.chat.id
+    if user_id not in user_messages:
+        user_messages[user_id] = []
+    user_messages[user_id].append(msg.message_id)
 
 @bot.message_handler(commands=['on'])
 def activate_bot(message):
@@ -65,21 +66,23 @@ def deactivate_bot(message):
 
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
-    user_id = message.from_user.id
+    user_id = message.chat.id
     if not BOT_ACTIVE:
-        bot.send_message(user_id, "🚫 البوت متوقف حالياً، شكراً لتفهمكم ❤️")
+        msg = bot.send_message(user_id, "🚫 البوت متوقف حالياً، شكراً لتفهمكم ❤️")
+        track_message(msg)
         return
 
+    clear_user_data(user_id)
     user_data[user_id] = {}
-    clear_messages(user_id)
-    welcome_text = "👋 أهلاً بك في متجر YAROB لشحن الألعاب 💳\n🔽 اختر اللعبة التي ترغب بشحنها:"
+    welcome_text = "👋 أهلاً بك في متجر YAROB لشحن الألعاب 💳
+🔽 اختر اللعبة التي ترغب بشحنها:"
     markup = types.InlineKeyboardMarkup()
     markup.add(
         types.InlineKeyboardButton("📱 PUBG", callback_data="pubg"),
         types.InlineKeyboardButton("🎮 Free Fire", callback_data="freefire")
     )
     msg = bot.send_message(user_id, welcome_text, reply_markup=markup)
-    store_message(user_id, msg)
+    track_message(msg)
 
 @bot.callback_query_handler(func=lambda call: call.data in ["pubg", "freefire"])
 def choose_game(call):
@@ -98,84 +101,83 @@ def choose_game(call):
     welcome_text = f"🔽 اختر كمية {price_label} التي ترغب بشرائها ل {game_name}:"
     markup = types.InlineKeyboardMarkup()
     for amount, price in prices.items():
-        markup.add(
-            types.InlineKeyboardButton(f"{amount} {price_label} - {price}", callback_data=amount)
-        )
-    markup.add(types.InlineKeyboardButton("❌ إلغاء الطلب", callback_data="cancel"))
-    msg = bot.send_message(user_id, welcome_text, reply_markup=markup)
-    store_message(user_id, msg)
+        markup.add(types.InlineKeyboardButton(f"{amount} {price_label} - {price}", callback_data=amount))
+    markup.add(types.InlineKeyboardButton("🔙 رجوع", callback_data="back_to_start"))
+    markup.add(types.InlineKeyboardButton("❌ إلغاء الطلب", callback_data="cancel_order"))
 
-@bot.callback_query_handler(func=lambda call: call.data == "cancel")
-def cancel_order(call):
-    user_id = call.from_user.id
-    clear_messages(user_id)
-    user_data.pop(user_id, None)
-    bot.send_message(user_id, "❌ تم إلغاء الطلب.")
+    msg = bot.send_message(user_id, welcome_text, reply_markup=markup)
+    track_message(msg)
 
 @bot.callback_query_handler(func=lambda call: call.data in prices_pubg or call.data in prices_freefire)
 def handle_selection(call):
     user_id = call.from_user.id
     game = user_data[user_id]['game']
     amount = call.data
-
     prices = prices_pubg if game == "pubg" else prices_freefire
     user_data[user_id].update({'amount': amount})
 
     payment_text = (
-        f"💰 السعر: {prices[amount]}\n\n"
-        f"📱 يرجى التحويل عبر سيرياتيل كاش (تحويل يدوي) إلى أحد الأرقام التالية:\n"
-        f"• 16954304\n"
-        f"• 81827789\n\n"
+        f"💰 السعر: {prices[amount]}
+
+"
+        f"📱 يرجى التحويل عبر سيرياتيل كاش (تحويل يدوي) إلى أحد الأرقام التالية:
+"
+        f"• 16954304
+"
+        f"• 81827789
+
+"
         f"بعد التحويل، أرسل رقم العملية:"
     )
     msg = bot.send_message(user_id, payment_text)
-    store_message(user_id, msg)
+    track_message(msg)
     bot.register_next_step_handler_by_chat_id(user_id, get_transaction_number)
-
-def is_numeric_only(text):
-    return text.isdigit()
 
 def get_transaction_number(message):
     user_id = message.from_user.id
-    if not is_numeric_only(message.text):
-        msg = bot.send_message(user_id, "🚫 رقم العملية يجب أن يحتوي على أرقام فقط. أعد الإرسال:")
-        store_message(user_id, msg)
+    if not message.text.isdigit():
+        msg = bot.send_message(user_id, "⚠️ الرجاء إدخال رقم العملية بشكل رقمي فقط.")
+        track_message(msg)
         return bot.register_next_step_handler_by_chat_id(user_id, get_transaction_number)
-
     user_data[user_id]['transaction_number'] = message.text
     msg = bot.send_message(user_id, "💸 أرسل الآن المبلغ الذي قمت بتحويله:")
-    store_message(user_id, msg)
+    track_message(msg)
     bot.register_next_step_handler_by_chat_id(user_id, get_amount)
 
 def get_amount(message):
     user_id = message.from_user.id
-    if not is_numeric_only(message.text):
-        msg = bot.send_message(user_id, "🚫 المبلغ يجب أن يكون أرقام فقط. أعد الإرسال:")
-        store_message(user_id, msg)
+    if not message.text.isdigit():
+        msg = bot.send_message(user_id, "⚠️ الرجاء إدخال المبلغ بشكل رقمي فقط.")
+        track_message(msg)
         return bot.register_next_step_handler_by_chat_id(user_id, get_amount)
-
     user_data[user_id]['transferred_amount'] = message.text
     msg = bot.send_message(user_id, "🎮 أرسل الآن ID حسابك داخل اللعبة:")
-    store_message(user_id, msg)
+    track_message(msg)
     bot.register_next_step_handler_by_chat_id(user_id, get_game_id)
 
 def get_game_id(message):
     user_id = message.from_user.id
-    if not is_numeric_only(message.text):
-        msg = bot.send_message(user_id, "🚫 ID اللعبة يجب أن يكون أرقام فقط. أعد الإرسال:")
-        store_message(user_id, msg)
+    if not message.text.isdigit():
+        msg = bot.send_message(user_id, "⚠️ الرجاء إدخال ID اللعبة بشكل رقمي فقط.")
+        track_message(msg)
         return bot.register_next_step_handler_by_chat_id(user_id, get_game_id)
 
     data = user_data[user_id]
     data['game_id'] = message.text
 
     final_message = (
-        f"🆕 طلب شحن جديد:\n"
-        f"👤 المستخدم: @{message.from_user.username or 'بدون يوزر'}\n"
-        f"🆔 تيليجرام: {user_id}\n"
-        f"🎮 ID اللعبة: {data['game_id']}\n"
-        f"🎯 الكمية: {data['amount']} {data['game']}\n"
-        f"💵 المبلغ: {data['transferred_amount']}\n"
+        f"🆕 طلب شحن جديد:
+"
+        f"👤 المستخدم: @{message.from_user.username or 'بدون يوزر'}
+"
+        f"🆔 تيليجرام: {user_id}
+"
+        f"🎮 ID اللعبة: {data['game_id']}
+"
+        f"🎯 الكمية: {data['amount']} {data['game']}
+"
+        f"💵 المبلغ: {data['transferred_amount']}
+"
         f"🔢 رقم العملية: {data['transaction_number']}"
     )
 
@@ -186,14 +188,24 @@ def get_game_id(message):
     )
 
     bot.send_message(ADMIN_ID, final_message, reply_markup=markup)
-    bot.send_message(user_id, "✅ تم استلام معلوماتك بنجاح! سيتم تنفيذ طلبك قريبًا 💚")
+    msg = bot.send_message(user_id, "✅ تم استلام معلوماتك بنجاح! سيتم تنفيذ طلبك قريبًا 💚")
+    track_message(msg)
+
+@bot.callback_query_handler(func=lambda call: call.data == "cancel_order")
+def cancel_order(call):
+    user_id = call.from_user.id
+    clear_user_data(user_id)
+    bot.send_message(user_id, "❌ تم إلغاء الطلب وحذف جميع الرسائل.")
+
+@bot.callback_query_handler(func=lambda call: call.data == "back_to_start")
+def back_to_start(call):
+    send_welcome(call.message)
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("confirm_"))
 def confirm_delivery(call):
     if call.from_user.id != ADMIN_ID:
         bot.answer_callback_query(call.id, "❌ هذا الزر مخصص للإدارة فقط.")
         return
-
     user_id = int(call.data.split("_")[1])
     bot.send_message(user_id, "✅ تم تنفيذ عملية الشحن بنجاح! شكراً لتعاملك معنا 🌟")
     bot.answer_callback_query(call.id, "تم إعلام العميل.")
@@ -207,12 +219,14 @@ def fail_delivery(call):
     user_id = int(call.data.split("_")[1])
     markup = types.InlineKeyboardMarkup()
     markup.add(types.InlineKeyboardButton("🔄 إعادة المحاولة", callback_data='retry'))
-    fail_text = "❌ فشلت العملية\nيرجى التأكد من صحة المعلومات وإعادة المحاولة."
+    fail_text = "❌ فشلت العملية
+يرجى التأكد من صحة المعلومات وإعادة المحاولة."
     bot.send_message(user_id, fail_text, reply_markup=markup)
     bot.answer_callback_query(call.id, "تم إعلام العميل بفشل العملية.")
 
 @bot.callback_query_handler(func=lambda call: call.data == 'retry')
 def retry_order(call):
+    clear_user_data(call.from_user.id)
     send_welcome(call.message)
 
 bot.infinity_polling()
