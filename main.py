@@ -13,7 +13,7 @@ bot = telebot.TeleBot(BOT_TOKEN)
 user_data = {}
 
 prices_pubg = {
-    "60": "9,500 S.P",
+    "60": "9,000 S.P",
     "120": "19,000 S.P",
     "180": "28,500 S.P",
     "325": "47,000 S.P",
