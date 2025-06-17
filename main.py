@@ -74,8 +74,7 @@ def send_welcome(message):
 
     clear_user_data(user_id)
     user_data[user_id] = {}
-    welcome_text = "👋 أهلاً بك في متجر YAROB لشحن الألعاب 💳
-🔽 اختر اللعبة التي ترغب بشحنها:"
+    welcome_text = "👋 أهلاً بك في متجر YAROB لشحن الألعاب 💳\n🔽 اختر اللعبة التي ترغب بشحنها:"
     markup = types.InlineKeyboardMarkup()
     markup.add(
         types.InlineKeyboardButton("📱 PUBG", callback_data="pubg"),
@@ -117,16 +116,10 @@ def handle_selection(call):
     user_data[user_id].update({'amount': amount})
 
     payment_text = (
-        f"💰 السعر: {prices[amount]}
-
-"
-        f"📱 يرجى التحويل عبر سيرياتيل كاش (تحويل يدوي) إلى أحد الأرقام التالية:
-"
-        f"• 16954304
-"
-        f"• 81827789
-
-"
+        f"💰 السعر: {prices[amount]}\n\n"
+        f"📱 يرجى التحويل عبر سيرياتيل كاش (تحويل يدوي) إلى أحد الأرقام التالية:\n"
+        f"• 16954304\n"
+        f"• 81827789\n\n"
         f"بعد التحويل، أرسل رقم العملية:"
     )
     msg = bot.send_message(user_id, payment_text)
@@ -166,18 +159,12 @@ def get_game_id(message):
     data['game_id'] = message.text
 
     final_message = (
-        f"🆕 طلب شحن جديد:
-"
-        f"👤 المستخدم: @{message.from_user.username or 'بدون يوزر'}
-"
-        f"🆔 تيليجرام: {user_id}
-"
-        f"🎮 ID اللعبة: {data['game_id']}
-"
-        f"🎯 الكمية: {data['amount']} {data['game']}
-"
-        f"💵 المبلغ: {data['transferred_amount']}
-"
+        f"🆕 طلب شحن جديد:\n"
+        f"👤 المستخدم: @{message.from_user.username or 'بدون يوزر'}\n"
+        f"🆔 تيليجرام: {user_id}\n"
+        f"🎮 ID اللعبة: {data['game_id']}\n"
+        f"🎯 الكمية: {data['amount']} {data['game']}\n"
+        f"💵 المبلغ: {data['transferred_amount']}\n"
         f"🔢 رقم العملية: {data['transaction_number']}"
     )
 
@@ -218,9 +205,8 @@ def fail_delivery(call):
 
     user_id = int(call.data.split("_")[1])
     markup = types.InlineKeyboardMarkup()
-    markup.add(types.InlineKeyboardButton("🔄 إعادة المحاولة", callback_data='retry'))
-    fail_text = "❌ فشلت العملية
-يرجى التأكد من صحة المعلومات وإعادة المحاولة."
+    markup.add(types.InlineKeyboardButton("▶️ لإعادة المحاولة اضغط start", callback_data='retry'))
+    fail_text = "❌ فشلت العملية\nيرجى التأكد من صحة المعلومات، ثم اضغط /start لإعادة المحاولة."
     bot.send_message(user_id, fail_text, reply_markup=markup)
     bot.answer_callback_query(call.id, "تم إعلام العميل بفشل العملية.")
 
