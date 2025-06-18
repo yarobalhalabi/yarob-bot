@@ -1,3 +1,4 @@
+
 from keep_alive import keep_alive
 keep_alive()
 
@@ -133,17 +134,17 @@ def get_transaction_number(message):
         track_message(msg)
         return bot.register_next_step_handler_by_chat_id(user_id, get_transaction_number)
     user_data[user_id]['transaction_number'] = message.text
-    msg = bot.send_message(user_id, "💸 أرسل الآن المبلغ الذي قمت بتحويله:")
+    msg = bot.send_message(user_id, "📞 الرجاء إدخال الرقم الذي قمت بالتحويل عليه (16954304 أو 81827789):")
     track_message(msg)
-    bot.register_next_step_handler_by_chat_id(user_id, get_amount)
+    bot.register_next_step_handler_by_chat_id(user_id, get_target_number)
 
-def get_amount(message):
+def get_target_number(message):
     user_id = message.from_user.id
-    if not message.text.isdigit():
-        msg = bot.send_message(user_id, "⚠️ الرجاء إدخال المبلغ بشكل رقمي فقط.")
+    if message.text not in ["16954304", "81827789"]:
+        msg = bot.send_message(user_id, "⚠️ الرقم غير صحيح، الرجاء إدخال أحد الرقمين فقط: 16954304 أو 81827789.")
         track_message(msg)
-        return bot.register_next_step_handler_by_chat_id(user_id, get_amount)
-    user_data[user_id]['transferred_amount'] = message.text
+        return bot.register_next_step_handler_by_chat_id(user_id, get_target_number)
+    user_data[user_id]['target_number'] = message.text
     msg = bot.send_message(user_id, "🎮 أرسل الآن ID حسابك داخل اللعبة:")
     track_message(msg)
     bot.register_next_step_handler_by_chat_id(user_id, get_game_id)
@@ -164,7 +165,7 @@ def get_game_id(message):
         f"🆔 تيليجرام: {user_id}\n"
         f"🎮 ID اللعبة: {data['game_id']}\n"
         f"🎯 الكمية: {data['amount']} {data['game']}\n"
-        f"💵 المبلغ: {data['transferred_amount']}\n"
+        f"📞 الرقم المحوّل عليه: {data['target_number']}\n"
         f"🔢 رقم العملية: {data['transaction_number']}"
     )
 
