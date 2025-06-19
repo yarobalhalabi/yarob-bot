@@ -189,7 +189,7 @@ def confirm_delivery(call):
     amount = user_data.get(user_id, {}).get("amount", "?")
     game_id = user_data.get(user_id, {}).get("game_id", "غير معروف")
     unit = "UC" if game == "pubg" else "💎"
-    confirm_msg = f"تم شحن حسابك بـ {amount} {unit} على الـ ID التالي: 📱{game_id} بنجاح ✅"
+    confirm_msg = f"تم شحن حسابك بـ {amount} {unit} على الـ ID التالي: 📱{game_id} بنجاح ✅  شكرا لتعاملك معنا 🌟"
     bot.send_message(user_id, confirm_msg)
 
     bot.send_message(ADMIN_ID, f"📦 تم الشحن إلى رقم العملية: {transaction_number}")
