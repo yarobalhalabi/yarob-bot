@@ -162,13 +162,21 @@ def go_back(call):
     user_id = call.from_user.id
     step = user_data.get(user_id, {}).get("step")
 
+    bot.delete_message(call.message.chat.id, call.message.message_id)
+
     if step == "choose_amount":
         user_data[user_id]["step"] = "choose_game"
-        return choose_game(call)
+        markup = types.InlineKeyboardMarkup()
+        markup.add(
+            types.InlineKeyboardButton("📱 PUBG", callback_data="pubg"),
+            types.InlineKeyboardButton("🎮 Free Fire", callback_data="freefire")
+        )
+        bot.send_message(user_id, "🔽 اختر اللعبة التي ترغب بشحنها:", reply_markup=markup)
+
     elif step == "choose_game":
-        return send_welcome(call.message)
+        send_welcome(call.message)
     else:
-        return send_welcome(call.message)
+        send_welcome(call.message)
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("confirm_"))
 def confirm_delivery(call):
