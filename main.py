@@ -1,10 +1,12 @@
+
 from keep_alive import keep_alive
 keep_alive()
 
+import os
 import telebot
 from telebot import types
 
-BOT_TOKEN = '8083003172:AAFW6qEm54TdLckA2nKFShCmxr2_V_UHj9A'
+BOT_TOKEN = os.environ.get("BOT_TOKEN")
 ADMIN_ID = 7188219652
 
 BOT_ACTIVE = True
@@ -194,7 +196,6 @@ def retry_order(call):
     clear_user_data(call.from_user.id)
     send_welcome(call.message)
 
-
 @bot.message_handler(func=lambda message: True, content_types=['text'])
 def filter_spam_messages(message):
     spam_keywords = ["http", "https", "www", "t.me", ".com", ".me", "₹", "free", "click", "promo", "join", "channel", "offer", "mil jayga"]
@@ -204,6 +205,5 @@ def filter_spam_messages(message):
     if user_data.get(message.from_user.id, {}).get("step") not in ["transaction_number", "target_number", "game_id"]:
         bot.reply_to(message, "❗ يرجى استخدام الأزرار فقط للتعامل مع البوت.")
         return
-
 
 bot.infinity_polling()
