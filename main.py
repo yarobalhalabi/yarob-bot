@@ -4,7 +4,7 @@ keep_alive()
 import telebot
 from telebot import types
 
-BOT_TOKEN = '8083003172:AAFAkfpg9D6ZgqjtEsKCM5khqCYK2QHeTGM'
+BOT_TOKEN = '8083003172:AAFW6qEm54TdLckA2nKFShCmxr2_V_UHj9A'
 ADMIN_ID = 7188219652
 
 BOT_ACTIVE = True
