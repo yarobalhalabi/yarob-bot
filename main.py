@@ -166,7 +166,6 @@ def go_back(call):
         user_data[user_id]["step"] = "choose_game"
         return choose_game(call)
     elif step == "choose_game":
-        user_data[user_id]["step"] = "start"
         return send_welcome(call.message)
     else:
         return send_welcome(call.message)
