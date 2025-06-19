@@ -192,8 +192,7 @@ def confirm_delivery(call):
     confirm_msg = f"تم شحن حسابك بـ {amount} {unit} على الـ ID التالي: 📱{game_id} بنجاح ✅"
     bot.send_message(user_id, confirm_msg)
 
-    bot.send_message(user_id, "✅ تم تنفيذ عملية الشحن بنجاح! شكراً لتعاملك معنا 🌟")
-    bot.send_message(ADMIN_ID, f"📦 تم الشحن إلى رقم العملية: {transaction_number}")
+        bot.send_message(ADMIN_ID, f"📦 تم الشحن إلى رقم العملية: {transaction_number}")
     bot.answer_callback_query(call.id, "تم إعلام العميل.")
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("fail_"))
