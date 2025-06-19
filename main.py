@@ -9,7 +9,6 @@ BOT_TOKEN = '8083003172:AAFAkfpg9D6ZgqjtEsKCM5khqCYK2QHeTGM'
 ADMIN_ID = 7188219652
 
 BOT_ACTIVE = True
-
 bot = telebot.TeleBot(BOT_TOKEN)
 user_data = {}
 
@@ -68,7 +67,7 @@ def amount_selection(call):
     markup = types.InlineKeyboardMarkup()
     markup.add(types.InlineKeyboardButton("🔙 رجوع", callback_data="back_amount"))
     markup.add(types.InlineKeyboardButton("❌ إلغاء الطلب", callback_data="cancel"))
-    bot.edit_message_text("💰 أرسل رقم العملية (رقمي فقط):", user_id, call.message.message_id, reply_markup=markup)
+    bot.edit_message_text("💰 أرسل رقم العملية (أرقام فقط):", user_id, call.message.message_id, reply_markup=markup)
     bot.register_next_step_handler_by_chat_id(user_id, get_transaction)
 
 def get_transaction(msg):
