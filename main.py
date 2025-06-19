@@ -106,7 +106,7 @@ def choose_game(call):
     markup.add(types.InlineKeyboardButton("🔙 رجوع", callback_data="back_to_start"))
     markup.add(types.InlineKeyboardButton("❌ إلغاء الطلب", callback_data="cancel_order"))
 
-    msg = bot.send_message(user_id, welcome_text, reply_markup=markup)
+    msg = bot.edit_message_text(welcome_text, chat_id=user_id, message_id=call.message.message_id, reply_markup=markup)
     track_message(msg)
 
 @bot.callback_query_handler(func=lambda call: call.data in prices_pubg or call.data in prices_freefire)
@@ -124,7 +124,7 @@ def handle_selection(call):
         f"• 81827789\n\n"
         f"بعد التحويل، أرسل رقم العملية:"
     )
-    msg = bot.send_message(user_id, payment_text)
+    msg = bot.edit_message_text(payment_text, chat_id=user_id, message_id=call.message.message_id)
     track_message(msg)
     bot.register_next_step_handler_by_chat_id(user_id, get_transaction_number)
 
@@ -190,14 +190,18 @@ def cancel_order(call):
 def back_to_start(call):
     send_welcome(call.message)
 
-@bot.callback_query_handler(func=lambda call: call.data.startswith("confirm_"))
-def confirm_delivery(call):
     if call.from_user.id != ADMIN_ID:
         bot.answer_callback_query(call.id, "❌ هذا الزر مخصص للإدارة فقط.")
         return
     parts = call.data.split("_")
     user_id = int(parts[1])
     transaction_number = parts[2]
+        game = user_data.get(user_id, {}).get("game", "unknown")
+    amount = user_data.get(user_id, {}).get("amount", "?")
+    game_id = user_data.get(user_id, {}).get("game_id", "غير معروف")
+    unit = "UC" if game == "pubg" else "💎"
+    confirm_msg = f"تم شحن حسابك بـ {amount} {unit} على الـ ID التالي: 📱{game_id} بنجاح ✅"
+    bot.send_message(user_id, confirm_msg)
     bot.send_message(user_id, "✅ تم تنفيذ عملية الشحن بنجاح! شكراً لتعاملك معنا 🌟")
     bot.send_message(ADMIN_ID, f"📦 تم الشحن إلى رقم العملية: {transaction_number}")
     bot.answer_callback_query(call.id, "تم إعلام العميل.")
