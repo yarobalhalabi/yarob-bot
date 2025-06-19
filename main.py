@@ -13,18 +13,17 @@ bot = telebot.TeleBot(BOT_TOKEN)
 user_data = {}
 
 prices_pubg = {
-    "60": "9,000",
-    "120": "18,000",
-    "180": "27,000",
-    "325": "45,000",
-    "660": "90,000",
-    "1800": "235,000",
-    "3850": "460,000"
+    "60": "9,500",
+    "120": "19,000",
+    "180": "28,500",
+    "325": "47,000",
+    "660": "92,000",
+    "1800": "240,000",
+    "3850": "480,000"
 }
 
 prices_freefire = {
     "110": "11,000",
-    "210": "22,000",
     "341": "33,000",
     "570": "55,000",
     "1160": "110,000",
@@ -193,5 +192,17 @@ def fail_delivery(call):
 def retry_order(call):
     clear_user_data(call.from_user.id)
     send_welcome(call.message)
+
+
+@bot.message_handler(func=lambda message: True, content_types=['text'])
+def filter_spam_messages(message):
+    spam_keywords = ["http", "https", "www", "t.me", ".com", ".me", "₹", "free", "click", "promo", "join", "channel", "offer", "mil jayga"]
+    if any(word in message.text.lower() for word in spam_keywords):
+        bot.reply_to(message, "🚫 يمنع إرسال الروابط أو الرسائل الدعائية داخل البوت.")
+        return
+    if user_data.get(message.from_user.id, {}).get("step") not in ["transaction_number", "target_number", "game_id"]:
+        bot.reply_to(message, "❗ يرجى استخدام الأزرار فقط للتعامل مع البوت.")
+        return
+
 
 bot.infinity_polling()
