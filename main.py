@@ -86,7 +86,6 @@ def choose_game(call):
     markup = types.InlineKeyboardMarkup()
     for amount, price in prices.items():
         markup.add(types.InlineKeyboardButton(f"{game_name} {amount}{price_label} - {price} ل.س", callback_data=amount))
-    markup.add(types.InlineKeyboardButton("🔙 رجوع", callback_data="go_back"))
 
     bot.edit_message_text(welcome_text, chat_id=user_id, message_id=call.message.message_id, reply_markup=markup)
 
@@ -156,27 +155,6 @@ def get_game_id(message):
 
     bot.send_message(ADMIN_ID, final_message, reply_markup=markup)
     bot.send_message(user_id, "✅ تم استلام معلوماتك بنجاح! سيتم تنفيذ طلبك قريبًا 💚")
-
-@bot.callback_query_handler(func=lambda call: call.data == "go_back")
-def go_back(call):
-    user_id = call.from_user.id
-    step = user_data.get(user_id, {}).get("step")
-
-    bot.delete_message(call.message.chat.id, call.message.message_id)
-
-    if step == "choose_amount":
-        user_data[user_id]["step"] = "choose_game"
-        markup = types.InlineKeyboardMarkup()
-        markup.add(
-            types.InlineKeyboardButton("📱 PUBG", callback_data="pubg"),
-            types.InlineKeyboardButton("🎮 Free Fire", callback_data="freefire")
-        )
-        bot.send_message(user_id, "🔽 اختر اللعبة التي ترغب بشحنها:", reply_markup=markup)
-
-    elif step == "choose_game":
-        send_welcome(call.message)
-    else:
-        send_welcome(call.message)
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("confirm_"))
 def confirm_delivery(call):
