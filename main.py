@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 
 from keep_alive import keep_alive
 keep_alive()
