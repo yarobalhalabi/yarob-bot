@@ -1,3 +1,4 @@
+
 from keep_alive import keep_alive
 keep_alive()
 
@@ -195,7 +196,9 @@ def confirm_delivery(call):
         bot.answer_callback_query(call.id, "❌ هذا الزر مخصص للإدارة فقط.")
         return
     user_id = int(call.data.split("_")[1])
+    transaction_number = user_data.get(user_id, {}).get("transaction_number", "غير معروف")
     bot.send_message(user_id, "✅ تم تنفيذ عملية الشحن بنجاح! شكراً لتعاملك معنا 🌟")
+    bot.send_message(ADMIN_ID, f"📦 تم الشحن إلى رقم العملية: {transaction_number}")
     bot.answer_callback_query(call.id, "تم إعلام العميل.")
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("fail_"))
