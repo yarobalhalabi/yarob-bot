@@ -15,21 +15,21 @@ user_data = {}
 user_messages = {}
 
 prices_pubg = {
-    "60": "9,500 S.P",
-    "120": "19,000 S.P",
-    "180": "28,500 S.P",
-    "325": "47,000 S.P",
-    "660": "92,000 S.P",
-    "1800": "240,000 S.P",
-    "3850": "480,000 S.P"
+    "60": "9,500",
+    "120": "19,000",
+    "180": "28,500",
+    "325": "47,000",
+    "660": "92,000",
+    "1800": "240,000",
+    "3850": "480,000"
 }
 
 prices_freefire = {
-    "110": "11,000 S.P",
-    "341": "33,000 S.P",
-    "570": "55,000 S.P",
-    "1160": "110,000 S.P",
-    "2200": "200,000 S.P"
+    "110": "11,000",
+    "341": "33,000",
+    "570": "55,000",
+    "1160": "110,000",
+    "2200": "200,000"
 }
 
 def clear_user_data(user_id):
@@ -76,7 +76,8 @@ def send_welcome(message):
 
     clear_user_data(user_id)
     user_data[user_id] = {}
-    welcome_text = "👋 أهلاً بك في متجر YAROB لشحن الألعاب 💳\n🔽 اختر اللعبة التي ترغب بشحنها:"
+    welcome_text = "👋 أهلاً بك في متجر YAROB لشحن الألعاب 💳
+🔽 اختر اللعبة التي ترغب بشحنها:"
     markup = types.InlineKeyboardMarkup()
     markup.add(
         types.InlineKeyboardButton("📱 PUBG", callback_data="pubg"),
@@ -92,17 +93,18 @@ def choose_game(call):
 
     if call.data == "pubg":
         prices = prices_pubg
-        game_name = "PUBG"
-        price_label = "شدة"
+        game_name = "Pubg"
+        price_label = "UC"
     else:
         prices = prices_freefire
-        game_name = "Free Fire"
-        price_label = "جوهره"
+        game_name = "Free"
+        price_label = "💎"
 
-    welcome_text = f"🔽 اختر كمية {price_label} التي ترغب بشرائها ل {game_name}:"
+    welcome_text = f"🎁 عروض {game_name} المتوفّرة:
+اختر باقتك:"
     markup = types.InlineKeyboardMarkup()
     for amount, price in prices.items():
-        markup.add(types.InlineKeyboardButton(f"{amount} {price_label} - {price}", callback_data=amount))
+        markup.add(types.InlineKeyboardButton(f"{game_name} {amount}{price_label} - {price} ل.س", callback_data=amount))
     markup.add(types.InlineKeyboardButton("🔙 رجوع", callback_data="back_to_start"))
     markup.add(types.InlineKeyboardButton("❌ إلغاء الطلب", callback_data="cancel_order"))
 
@@ -118,10 +120,16 @@ def handle_selection(call):
     user_data[user_id].update({'amount': amount})
 
     payment_text = (
-        f"💰 السعر: {prices[amount]}\n\n"
-        f"📱 يرجى التحويل عبر سيرياتيل كاش (تحويل يدوي) إلى أحد الأرقام التالية:\n"
-        f"• 16954304\n"
-        f"• 81827789\n\n"
+        f"💰 السعر: {prices[amount]} ل.س
+
+"
+        f"📱 يرجى التحويل عبر سيرياتيل كاش (تحويل يدوي) إلى أحد الأرقام التالية:
+"
+        f"• 16954304
+"
+        f"• 81827789
+
+"
         f"بعد التحويل، أرسل رقم العملية:"
     )
     msg = bot.send_message(user_id, payment_text)
@@ -161,12 +169,18 @@ def get_game_id(message):
     data['game_id'] = message.text
 
     final_message = (
-        f"🆕 طلب شحن جديد:\n"
-        f"👤 المستخدم: @{message.from_user.username or 'بدون يوزر'}\n"
-        f"🆔 تيليجرام: {user_id}\n"
-        f"🎮 ID اللعبة: {data['game_id']}\n"
-        f"🎯 الكمية: {data['amount']} {data['game']}\n"
-        f"📞 الرقم المحوّل عليه: {data['target_number']}\n"
+        f"🆕 طلب شحن جديد:
+"
+        f"👤 المستخدم: @{message.from_user.username or 'بدون يوزر'}
+"
+        f"🆔 تيليجرام: {user_id}
+"
+        f"🎮 ID اللعبة: {data['game_id']}
+"
+        f"🎯 الكمية: {data['amount']} {data['game']}
+"
+        f"📞 الرقم المحوّل عليه: {data['target_number']}
+"
         f"🔢 رقم العملية: {data['transaction_number']}"
     )
 
@@ -208,7 +222,8 @@ def fail_delivery(call):
     user_id = int(call.data.split("_")[1])
     markup = types.InlineKeyboardMarkup()
     markup.add(types.InlineKeyboardButton("▶️ لإعادة المحاولة اضغط start", callback_data='retry'))
-    fail_text = "❌ فشلت العملية\nيرجى التأكد من صحة المعلومات، ثم اضغط /start لإعادة المحاولة."
+    fail_text = "❌ فشلت العملية
+يرجى التأكد من صحة المعلومات، ثم اضغط /start لإعادة المحاولة."
     bot.send_message(user_id, fail_text, reply_markup=markup)
     bot.answer_callback_query(call.id, "تم إعلام العميل بفشل العملية.")
 
