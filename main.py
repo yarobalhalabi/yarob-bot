@@ -172,7 +172,7 @@ def get_game_id(message):
 
     markup = types.InlineKeyboardMarkup()
     markup.add(
-        types.InlineKeyboardButton("✅ تمت العملية", callback_data=f"confirm_{user_id}"),
+        types.InlineKeyboardButton("✅ تمت العملية", callback_data=f"confirm_{user_id}_{data['transaction_number']}"),
         types.InlineKeyboardButton("❌ فشلت العملية", callback_data=f"fail_{user_id}")
     )
 
@@ -195,8 +195,9 @@ def confirm_delivery(call):
     if call.from_user.id != ADMIN_ID:
         bot.answer_callback_query(call.id, "❌ هذا الزر مخصص للإدارة فقط.")
         return
-    user_id = int(call.data.split("_")[1])
-    transaction_number = user_data.get(user_id, {}).get("transaction_number", "غير معروف")
+    parts = call.data.split("_")
+    user_id = int(parts[1])
+    transaction_number = parts[2]
     bot.send_message(user_id, "✅ تم تنفيذ عملية الشحن بنجاح! شكراً لتعاملك معنا 🌟")
     bot.send_message(ADMIN_ID, f"📦 تم الشحن إلى رقم العملية: {transaction_number}")
     bot.answer_callback_query(call.id, "تم إعلام العميل.")
