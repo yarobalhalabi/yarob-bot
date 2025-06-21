@@ -60,7 +60,7 @@ def deactivate_bot(message):
 def send_welcome(message):
     user_id = message.from_user.id
     if not BOT_ACTIVE:
-        bot.send_message(user_id, "🚫 البوت متوقف حالياً، شكراً لتفهمكم ❤️")
+        bot.send_message(user_id, "🚫 البوت متوقف حالياً، نشكر تفهمكم ❤️")
         return
 
     clear_user_data(user_id)
