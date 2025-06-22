@@ -35,19 +35,6 @@ prices_freefire = {
     "2200": "200,000"
 }
 
-# اشتراكات ببجي مع الأسعار
-subscriptions_pubg = {
-    "⭐ برايم": "13,000",
-    "🌟 برايم بلس": "130,000"
-}
-
-# اشتراكات فري فاير مع الأسعار
-subscriptions_freefire = {
-    "🛡️ تصريح مستوى": "25,000",
-    "🗓️ عضوية أسبوعية": "25,000",
-    "📅 عضوية شهرية": "75,000"
-}
-
 def clear_user_data(user_id):
     user_data.pop(user_id, None)
 
@@ -78,97 +65,50 @@ def send_welcome(message):
 
     clear_user_data(user_id)
     user_data[user_id] = {"step": "start"}
-    welcome_text = "👋 أهلاً بك في متجر YAROB لشحن الألعاب 💳\n🔽 اختر اللعبة:"
+    welcome_text = "👋 أهلاً بك في متجر YAROB لشحن الألعاب 💳\n🔽 اختر اللعبة التي ترغب بشحنها:"
     markup = types.InlineKeyboardMarkup()
     markup.add(
-        types.InlineKeyboardButton("📱 PUBG", callback_data="game_pubg"),
-        types.InlineKeyboardButton("🎮 Free Fire", callback_data="game_freefire")
+        types.InlineKeyboardButton("📱 PUBG", callback_data="pubg"),
+        types.InlineKeyboardButton("🎮 Free Fire", callback_data="freefire")
     )
     bot.send_message(user_id, welcome_text, reply_markup=markup)
 
-@bot.callback_query_handler(func=lambda call: call.data.startswith("game_"))
+@bot.callback_query_handler(func=lambda call: call.data in ["pubg", "freefire"])
 def choose_game(call):
-    game = call.data.split("_")[1]
     user_id = call.from_user.id
-    user_data[user_id] = {"game": game, "step": "choose_type"}
+    user_data[user_id] = {'game': call.data, "step": "choose_game"}
 
-    markup = types.InlineKeyboardMarkup()
-    markup.add(
-        types.InlineKeyboardButton("💰 الأسعار", callback_data="type_prices"),
-        types.InlineKeyboardButton("🧾 الاشتراكات", callback_data="type_subscriptions"),
-        types.InlineKeyboardButton("🔙 رجوع", callback_data="restart")
-    )
-    bot.edit_message_text(f"📍 اختر نوع الخدمة للعبة {'PUBG' if game == 'pubg' else 'Free Fire'}:", chat_id=user_id, message_id=call.message.message_id, reply_markup=markup)
-
-@bot.callback_query_handler(func=lambda call: call.data in ["type_prices", "type_subscriptions"])
-def show_options(call):
-    user_id = call.from_user.id
-    game = user_data.get(user_id, {}).get("game")
-    if not game:
-        bot.answer_callback_query(call.id, "⚠️ حدث خطأ: لم يتم تحديد اللعبة. الرجاء إعادة البدء.")
-        send_welcome(call.message)
-        return
-
-    choice = call.data
-
-    markup = types.InlineKeyboardMarkup()
-    if choice == "type_prices":
-        items = prices_pubg if game == "pubg" else prices_freefire
-        unit = "UC" if game == "pubg" else "💎"
-        for amount, price in items.items():
-            markup.add(types.InlineKeyboardButton(f"{amount} {unit} - {price} ل.س", callback_data=f"price_{amount}"))
-        bot.edit_message_text("💵 الأسعار المتوفرة:", chat_id=user_id, message_id=call.message.message_id, reply_markup=markup)
+    if call.data == "pubg":
+        prices = prices_pubg
+        game_name = "Pubg"
+        price_label = "UC"
     else:
-        # عرض الاشتراكات مع السعر
-        items = subscriptions_pubg if game == "pubg" else subscriptions_freefire
-        for sub_name, sub_price in items.items():
-            markup.add(types.InlineKeyboardButton(f"{sub_name} - {sub_price} ل.س", callback_data=f"sub_{sub_name}"))
-        bot.edit_message_text("🧾 الاشتراكات المتوفرة:", chat_id=user_id, message_id=call.message.message_id, reply_markup=markup)
+        prices = prices_freefire
+        game_name = "Free"
+        price_label = "💎"
 
-@bot.callback_query_handler(func=lambda call: call.data == "restart")
-def restart(call):
-    bot.answer_callback_query(call.id)
-    send_welcome(call.message)
+    welcome_text = f"🎁 عروض {game_name} المتوفّرة:\nاختر باقتك:"
+    markup = types.InlineKeyboardMarkup()
+    for amount, price in prices.items():
+        markup.add(types.InlineKeyboardButton(f"{game_name} {amount}{price_label} - {price} ل.س", callback_data=amount))
 
-@bot.callback_query_handler(func=lambda call: call.data.startswith("price_") or call.data.startswith("sub_"))
+    bot.edit_message_text(welcome_text, chat_id=user_id, message_id=call.message.message_id, reply_markup=markup)
+
+@bot.callback_query_handler(func=lambda call: call.data in prices_pubg or call.data in prices_freefire)
 def handle_selection(call):
     user_id = call.from_user.id
-    game = user_data[user_id]["game"]
-    data_type = "price" if call.data.startswith("price_") else "sub"
-    selected = call.data.split("_", 1)[1]  # هنا بعدنا "_" ليش لأن اسم الاشتراك فيه مسافات أحياناً
-    user_data[user_id]["step"] = "ordering"
+    game = user_data[user_id]['game']
+    amount = call.data
+    prices = prices_pubg if game == "pubg" else prices_freefire
+    user_data[user_id].update({'amount': amount, "step": "choose_amount"})
 
-    # حفظ الاختيار
-    if data_type == "price":
-        user_data[user_id]["amount"] = selected
-        user_data[user_id]["selection_type"] = "price"
-    else:
-        # الاشتراك بالاسم مباشرة
-        user_data[user_id]["subscription"] = selected
-        user_data[user_id]["selection_type"] = "subscription"
-
-    payment_text = ""
-    if data_type == "price":
-        price_val = prices_pubg[selected] if game == "pubg" else prices_freefire[selected]
-        unit = "UC" if game == "pubg" else "💎"
-        payment_text = (
-            f"💰 السعر: {price_val} ل.س\n\n"
-            f"📱 يرجى التحويل عبر سيرياتيل كاش إلى أحد الأرقام التالية:\n"
-            f" • 16954304\n"
-            f" • 81827789\n\n"
-            f"بعد التحويل، أرسل رقم العملية:"
-        )
-    else:
-        # سعر الاشتراك من القاموس
-        sub_price = subscriptions_pubg[selected] if game == "pubg" else subscriptions_freefire[selected]
-        payment_text = (
-            f"🧾 طلب الاشتراك: {selected} - السعر: {sub_price} ل.س\n\n"
-            f"📱 يرجى التحويل عبر سيرياتيل كاش إلى أحد الأرقام التالية:\n"
-            f" • 16954304\n"
-            f" • 81827789\n\n"
-            f"بعد التحويل، أرسل رقم العملية:"
-        )
-
+    payment_text = (
+        f"💰 السعر: {prices[amount]} ل.س\n\n"
+        f"📱 يرجى التحويل عبر سيرياتيل كاش (تحويل يدوي) إلى أحد الأرقام التالية:\n"
+        f"• `16954304`\n"
+        f"• `81827789`\n\n"
+        f"بعد التحويل، أرسل رقم العملية:"
+    )
     bot.edit_message_text(payment_text, chat_id=user_id, message_id=call.message.message_id)
     bot.register_next_step_handler_by_chat_id(user_id, get_transaction_number)
 
@@ -203,19 +143,11 @@ def get_game_id(message):
     data["step"] = "game_id"
 
     final_message = (
-        f"🆕 طلب جديد:\n"
+        f"🆕 طلب شحن جديد:\n"
         f"👤 المستخدم: @{message.from_user.username or 'بدون يوزر'}\n"
         f"🆔 تيليجرام: {user_id}\n"
-        f"🎮 اللعبة: {'PUBG' if data['game']=='pubg' else 'Free Fire'}\n"
-    )
-
-    if data.get("selection_type") == "price":
-        unit = "UC" if data['game'] == "pubg" else "💎"
-        final_message += f"🎯 الكمية: {data['amount']} {unit}\n"
-    else:
-        final_message += f"🎯 الاشتراك: {data.get('subscription', 'غير معروف')}\n"
-
-    final_message += (
+        f"🎮 ID اللعبة: {data['game_id']}\n"
+        f"🎯 الكمية: {data['amount']} {data['game']}\n"
         f"📞 الرقم المحوّل عليه: {data['target_number']}\n"
         f"🔢 رقم العملية: {data['transaction_number']}"
     )
@@ -238,21 +170,13 @@ def confirm_delivery(call):
     user_id = int(parts[1])
     transaction_number = parts[2]
 
-    data = user_data.get(user_id, {})
-    game = data.get("game", "unknown")
-    game_id = data.get("game_id", "غير معروف")
-
-    if data.get("selection_type") == "price":
-        amount = data.get("amount", "?")
-        unit = "UC" if game == "pubg" else "💎"
-        confirm_msg = f"تم شحن حسابك بـ {amount} {unit} على الـ ID التالي: 📱{game_id} بنجاح ✅ شكراً لتعاملك معنا 🌟"
-    else:
-        subscription = data.get("subscription", "اشتراك")
-        # السعر
-        sub_price = subscriptions_pubg.get(subscription) if game == "pubg" else subscriptions_freefire.get(subscription)
-        confirm_msg = f"تم شحن حسابك بالاشتراك: {subscription} - السعر: {sub_price} ل.س بنجاح ✅ شكراً لتعاملك معنا 🌟"
-
+    game = user_data.get(user_id, {}).get("game", "unknown")
+    amount = user_data.get(user_id, {}).get("amount", "?")
+    game_id = user_data.get(user_id, {}).get("game_id", "غير معروف")
+    unit = "UC" if game == "pubg" else "💎"
+    confirm_msg = f"تم شحن حسابك بـ {amount} {unit} على الـ ID التالي: 📱{game_id} بنجاح ✅  شكرا لتعاملك معنا 🌟"
     bot.send_message(user_id, confirm_msg)
+
     bot.send_message(ADMIN_ID, f"📦 تم الشحن إلى رقم العملية: {transaction_number}")
     bot.answer_callback_query(call.id, "تم إعلام العميل.")
 
@@ -264,7 +188,7 @@ def fail_delivery(call):
 
     user_id = int(call.data.split("_")[1])
     markup = types.InlineKeyboardMarkup()
-    markup.add(types.InlineKeyboardButton("▶️ لإعادة المحاولة اضغط /start", callback_data='retry'))
+    markup.add(types.InlineKeyboardButton("▶️ لإعادة المحاولة اضغط start", callback_data='retry'))
     fail_text = "❌ فشلت العملية\nيرجى التأكد من صحة المعلومات، ثم اضغط /start لإعادة المحاولة."
     bot.send_message(user_id, fail_text, reply_markup=markup)
     bot.answer_callback_query(call.id, "تم إعلام العميل بفشل العملية.")
