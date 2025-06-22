@@ -1,3 +1,4 @@
+
 from keep_alive import keep_alive
 keep_alive()
 
@@ -26,6 +27,14 @@ prices_pubg = {
     "3850": "460,000"
 }
 
+subscriptions_pubg = {
+    "برايم": "14,000",
+    "برايم بلس": "130,000",
+    "حزمة ازدهار 1$": "13,000",
+    "حزمة ازدهار 3$": "39,000",
+    "حزمة ازدهار 5$": "65,000"
+}
+
 prices_freefire = {
     "110": "11,000",
     "210": "22,000",
@@ -33,6 +42,12 @@ prices_freefire = {
     "570": "55,000",
     "1160": "110,000",
     "2200": "200,000"
+}
+
+subscriptions_freefire = {
+    "عضوية أسبوعية": "26,000",
+    "عضوية شهرية": "77,000",
+    "تصريح مستوى": "25,000"
 }
 
 def clear_user_data(user_id):
@@ -65,48 +80,72 @@ def send_welcome(message):
 
     clear_user_data(user_id)
     user_data[user_id] = {"step": "start"}
-    welcome_text = "👋 أهلاً بك في متجر YAROB لشحن الألعاب 💳\n🔽 اختر اللعبة التي ترغب بشحنها:"
+    welcome_text = """👋 أهلاً بك في متجر YAROB لشحن الألعاب 💳
+🔽 اختر اللعبة التي ترغب بشحنها:"""
     markup = types.InlineKeyboardMarkup()
     markup.add(
-        types.InlineKeyboardButton("📱 PUBG", callback_data="pubg"),
-        types.InlineKeyboardButton("🎮 Free Fire", callback_data="freefire")
+        types.InlineKeyboardButton("📱 PUBG", callback_data="pubg_menu"),
+        types.InlineKeyboardButton("🎮 Free Fire", callback_data="freefire_menu")
     )
     bot.send_message(user_id, welcome_text, reply_markup=markup)
 
-@bot.callback_query_handler(func=lambda call: call.data in ["pubg", "freefire"])
-def choose_game(call):
+@bot.callback_query_handler(func=lambda call: call.data in ["pubg_menu", "freefire_menu"])
+def show_game_options(call):
     user_id = call.from_user.id
-    user_data[user_id] = {'game': call.data, "step": "choose_game"}
-
-    if call.data == "pubg":
-        prices = prices_pubg
-        game_name = "Pubg"
-        price_label = "UC"
-    else:
-        prices = prices_freefire
-        game_name = "Free"
-        price_label = "💎"
-
-    welcome_text = f"🎁 عروض {game_name} المتوفّرة:\nاختر باقتك:"
+    game = "pubg" if call.data == "pubg_menu" else "freefire"
+    user_data[user_id] = {'game': game, "step": "choose_game"}
     markup = types.InlineKeyboardMarkup()
-    for amount, price in prices.items():
-        markup.add(types.InlineKeyboardButton(f"{game_name} {amount}{price_label} - {price} ل.س", callback_data=amount))
+    markup.add(
+        types.InlineKeyboardButton("🎁 اختيار شدات" if game == "pubg" else "💎 الجواهر", callback_data=f"{game}_main"),
+        types.InlineKeyboardButton("📝 الاشتراكات", callback_data=f"{game}_subs")
+    )
+    bot.edit_message_text("🔽 اختر نوع الطلب:", chat_id=user_id, message_id=call.message.message_id, reply_markup=markup)
 
-    bot.edit_message_text(welcome_text, chat_id=user_id, message_id=call.message.message_id, reply_markup=markup)
+@bot.callback_query_handler(func=lambda call: call.data in ["pubg_main", "freefire_main", "pubg_subs", "freefire_subs"])
+def show_packages(call):
+    user_id = call.from_user.id
+    game, category = call.data.split("_")
+    user_data[user_id] = {'game': game, 'category': category, "step": "choose_category"}
 
-@bot.callback_query_handler(func=lambda call: call.data in prices_pubg or call.data in prices_freefire)
+    if category == "main":
+        prices = prices_pubg if game == "pubg" else prices_freefire
+        label = "UC" if game == "pubg" else "💎"
+    else:
+        prices = subscriptions_pubg if game == "pubg" else subscriptions_freefire
+        label = ""
+
+    markup = types.InlineKeyboardMarkup()
+    for name, price in prices.items():
+        markup.add(types.InlineKeyboardButton(f"{name} {label} - {price} ل.س", callback_data=name))
+
+    bot.edit_message_text("🎁 اختر الباقة:", chat_id=user_id, message_id=call.message.message_id, reply_markup=markup)
+
+@bot.callback_query_handler(func=lambda call: call.data in list(prices_pubg.keys()) + list(prices_freefire.keys()) + list(subscriptions_pubg.keys()) + list(subscriptions_freefire.keys()))
 def handle_selection(call):
     user_id = call.from_user.id
-    game = user_data[user_id]['game']
-    amount = call.data
-    prices = prices_pubg if game == "pubg" else prices_freefire
-    user_data[user_id].update({'amount': amount, "step": "choose_amount"})
+    data = user_data[user_id]
+    data.update({'amount': call.data, "step": "choose_amount"})
+
+    game = data['game']
+    category = data['category']
+    prices = {
+        ('pubg', 'main'): prices_pubg,
+        ('freefire', 'main'): prices_freefire,
+        ('pubg', 'subs'): subscriptions_pubg,
+        ('freefire', 'subs'): subscriptions_freefire,
+    }[(game, category)]
 
     payment_text = (
-        f"💰 السعر: {prices[amount]} ل.س\n\n"
-        f"📱 يرجى التحويل عبر سيرياتيل كاش (تحويل يدوي) إلى أحد الأرقام التالية:\n"
-        f"• `16954304`\n"
-        f"• `81827789`\n\n"
+        f"💰 السعر: {prices[call.data]} ل.س
+
+"
+        f"📱 يرجى التحويل عبر سيرياتيل كاش (تحويل يدوي) إلى أحد الأرقام التالية:
+"
+        f"• `16954304`
+"
+        f"• `81827789`
+
+"
         f"بعد التحويل، أرسل رقم العملية:"
     )
     bot.edit_message_text(payment_text, chat_id=user_id, message_id=call.message.message_id)
@@ -143,12 +182,18 @@ def get_game_id(message):
     data["step"] = "game_id"
 
     final_message = (
-        f"🆕 طلب شحن جديد:\n"
-        f"👤 المستخدم: @{message.from_user.username or 'بدون يوزر'}\n"
-        f"🆔 تيليجرام: {user_id}\n"
-        f"🎮 ID اللعبة: {data['game_id']}\n"
-        f"🎯 الكمية: {data['amount']} {data['game']}\n"
-        f"📞 الرقم المحوّل عليه: {data['target_number']}\n"
+        f"🆕 طلب شحن جديد:
+"
+        f"👤 المستخدم: @{message.from_user.username or 'بدون يوزر'}
+"
+        f"🆔 تيليجرام: {user_id}
+"
+        f"🎮 ID اللعبة: {data['game_id']}
+"
+        f"🎯 الكمية: {data['amount']} ({data['game']})
+"
+        f"📞 الرقم المحوّل عليه: {data['target_number']}
+"
         f"🔢 رقم العملية: {data['transaction_number']}"
     )
 
@@ -189,7 +234,8 @@ def fail_delivery(call):
     user_id = int(call.data.split("_")[1])
     markup = types.InlineKeyboardMarkup()
     markup.add(types.InlineKeyboardButton("▶️ لإعادة المحاولة اضغط start", callback_data='retry'))
-    fail_text = "❌ فشلت العملية\nيرجى التأكد من صحة المعلومات، ثم اضغط /start لإعادة المحاولة."
+    fail_text = "❌ فشلت العملية
+يرجى التأكد من صحة المعلومات، ثم اضغط /start لإعادة المحاولة."
     bot.send_message(user_id, fail_text, reply_markup=markup)
     bot.answer_callback_query(call.id, "تم إعلام العميل بفشل العملية.")
 
