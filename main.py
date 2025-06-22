@@ -105,8 +105,8 @@ def handle_selection(call):
     payment_text = (
         f"💰 السعر: {prices[amount]} ل.س\n\n"
         f"📱 يرجى التحويل عبر سيرياتيل كاش (تحويل يدوي) إلى أحد الأرقام التالية:\n"
-        f"• `16954304`\n"
-        f"• `81827789`\n\n"
+        f"   16954304 \n"
+        f"   81827789 \n\n"
         f"بعد التحويل، أرسل رقم العملية:"
     )
     bot.edit_message_text(payment_text, chat_id=user_id, message_id=call.message.message_id)
