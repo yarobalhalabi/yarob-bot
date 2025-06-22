@@ -1,4 +1,3 @@
-
 from keep_alive import keep_alive
 keep_alive()
 
@@ -78,8 +77,7 @@ def send_welcome(message):
 
     clear_user_data(user_id)
     user_data[user_id] = {"step": "start"}
-    welcome_text = "👋 أهلاً بك في متجر YAROB لشحن الألعاب 💳
-🔽 اختر اللعبة:"
+    welcome_text = "👋 أهلاً بك في متجر YAROB لشحن الألعاب 💳\n🔽 اختر اللعبة:"
     markup = types.InlineKeyboardMarkup()
     markup.add(
         types.InlineKeyboardButton("📱 PUBG", callback_data="game_pubg"),
@@ -104,7 +102,12 @@ def choose_game(call):
 @bot.callback_query_handler(func=lambda call: call.data in ["type_prices", "type_subscriptions"])
 def show_options(call):
     user_id = call.from_user.id
-    game = user_data[user_id]["game"]
+    game = user_data.get(user_id, {}).get("game")
+    if not game:
+        bot.answer_callback_query(call.id, "⚠️ حدث خطأ: لم يتم تحديد اللعبة. الرجاء إعادة البدء.")
+        send_welcome(call.message)
+        return
+
     choice = call.data
 
     markup = types.InlineKeyboardMarkup()
@@ -146,31 +149,18 @@ def handle_selection(call):
         price_val = prices_pubg[selected] if game == "pubg" else prices_freefire[selected]
         unit = "UC" if game == "pubg" else "💎"
         payment_text = (
-            f"💰 السعر: {price_val} ل.س
-
-"
-            f"📱 يرجى التحويل عبر سيرياتيل كاش إلى أحد الأرقام التالية:
-"
-            f" • 16954304
-"
-            f" • 81827789
-
-"
+            f"💰 السعر: {price_val} ل.س\n\n"
+            f"📱 يرجى التحويل عبر سيرياتيل كاش إلى أحد الأرقام التالية:\n"
+            f" • 16954304\n"
+            f" • 81827789\n\n"
             f"بعد التحويل، أرسل رقم العملية:"
         )
     else:
-        # For subscriptions, can set fixed prices or instructions
         payment_text = (
-            f"🧾 طلب الاشتراك: {user_data[user_id]['subscription']}
-
-"
-            f"📱 يرجى التحويل عبر سيرياتيل كاش إلى أحد الأرقام التالية:
-"
-            f" • 16954304
-"
-            f" • 81827789
-
-"
+            f"🧾 طلب الاشتراك: {user_data[user_id]['subscription']}\n\n"
+            f"📱 يرجى التحويل عبر سيرياتيل كاش إلى أحد الأرقام التالية:\n"
+            f" • 16954304\n"
+            f" • 81827789\n\n"
             f"بعد التحويل، أرسل رقم العملية:"
         )
 
@@ -208,27 +198,20 @@ def get_game_id(message):
     data["step"] = "game_id"
 
     final_message = (
-        f"🆕 طلب جديد:
-"
-        f"👤 المستخدم: @{message.from_user.username or 'بدون يوزر'}
-"
-        f"🆔 تيليجرام: {user_id}
-"
-        f"🎮 اللعبة: {'PUBG' if data['game']=='pubg' else 'Free Fire'}
-"
+        f"🆕 طلب جديد:\n"
+        f"👤 المستخدم: @{message.from_user.username or 'بدون يوزر'}\n"
+        f"🆔 تيليجرام: {user_id}\n"
+        f"🎮 اللعبة: {'PUBG' if data['game']=='pubg' else 'Free Fire'}\n"
     )
 
     if data.get("selection_type") == "price":
         unit = "UC" if data['game'] == "pubg" else "💎"
-        final_message += f"🎯 الكمية: {data['amount']} {unit}
-"
+        final_message += f"🎯 الكمية: {data['amount']} {unit}\n"
     else:
-        final_message += f"🎯 الاشتراك: {data.get('subscription', 'غير معروف')}
-"
+        final_message += f"🎯 الاشتراك: {data.get('subscription', 'غير معروف')}\n"
 
     final_message += (
-        f"📞 الرقم المحوّل عليه: {data['target_number']}
-"
+        f"📞 الرقم المحوّل عليه: {data['target_number']}\n"
         f"🔢 رقم العملية: {data['transaction_number']}"
     )
 
@@ -269,8 +252,7 @@ def fail_delivery(call):
     user_id = int(call.data.split("_")[1])
     markup = types.InlineKeyboardMarkup()
     markup.add(types.InlineKeyboardButton("▶️ لإعادة المحاولة اضغط /start", callback_data='retry'))
-    fail_text = "❌ فشلت العملية
-يرجى التأكد من صحة المعلومات، ثم اضغط /start لإعادة المحاولة."
+    fail_text = "❌ فشلت العملية\nيرجى التأكد من صحة المعلومات، ثم اضغط /start لإعادة المحاولة."
     bot.send_message(user_id, fail_text, reply_markup=markup)
     bot.answer_callback_query(call.id, "تم إعلام العميل بفشل العملية.")
 
