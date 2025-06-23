@@ -76,7 +76,9 @@ def send_welcome(message):
 @bot.callback_query_handler(func=lambda call: call.data in ["pubg", "freefire"])
 def choose_game(call):
     if not BOT_ACTIVE:
-        bot.answer_callback_query(call.id, "🚫 البوت متوقف حالياً.")
+        bot.edit_message_text("❌ البوت متوقف حالياً، لا يمكن إتمام الطلب الآن. يرجى المحاولة لاحقاً.",
+                              chat_id=call.message.chat.id,
+                              message_id=call.message.message_id)
         return
 
     user_id = call.from_user.id
@@ -101,7 +103,9 @@ def choose_game(call):
 @bot.callback_query_handler(func=lambda call: call.data in prices_pubg or call.data in prices_freefire)
 def handle_selection(call):
     if not BOT_ACTIVE:
-        bot.answer_callback_query(call.id, "🚫 البوت متوقف حالياً.")
+        bot.edit_message_text("❌ البوت متوقف حالياً، لا يمكن إتمام الطلب الآن. يرجى المحاولة لاحقاً.",
+                              chat_id=call.message.chat.id,
+                              message_id=call.message.message_id)
         return
 
     user_id = call.from_user.id
@@ -184,7 +188,6 @@ def get_game_id(message):
 @bot.callback_query_handler(func=lambda call: call.data.startswith("confirm_"))
 def confirm_delivery(call):
     if call.from_user.id != ADMIN_ID:
-        bot.answer_callback_query(call.id, "❌ هذا الزر مخصص للإدارة فقط.")
         return
     parts = call.data.split("_")
     user_id = int(parts[1])
@@ -198,12 +201,10 @@ def confirm_delivery(call):
     bot.send_message(user_id, confirm_msg)
 
     bot.send_message(ADMIN_ID, f"📦 تم الشحن إلى رقم العملية: {transaction_number}")
-    bot.answer_callback_query(call.id, "تم إعلام العميل.")
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("fail_"))
 def fail_delivery(call):
     if call.from_user.id != ADMIN_ID:
-        bot.answer_callback_query(call.id, "❌ هذا الزر مخصص للإدارة فقط.")
         return
 
     user_id = int(call.data.split("_")[1])
@@ -211,12 +212,13 @@ def fail_delivery(call):
     markup.add(types.InlineKeyboardButton("▶️ لإعادة المحاولة اضغط start", callback_data='retry'))
     fail_text = "❌ فشلت العملية\nيرجى التأكد من صحة المعلومات، ثم اضغط /start لإعادة المحاولة."
     bot.send_message(user_id, fail_text, reply_markup=markup)
-    bot.answer_callback_query(call.id, "تم إعلام العميل بفشل العملية.")
 
 @bot.callback_query_handler(func=lambda call: call.data == 'retry')
 def retry_order(call):
     if not BOT_ACTIVE:
-        bot.answer_callback_query(call.id, "🚫 البوت متوقف حالياً.")
+        bot.edit_message_text("❌ البوت متوقف حالياً، لا يمكن إتمام الطلب الآن. يرجى المحاولة لاحقاً.",
+                              chat_id=call.message.chat.id,
+                              message_id=call.message.message_id)
         return
     clear_user_data(call.from_user.id)
     send_welcome(call.message)
