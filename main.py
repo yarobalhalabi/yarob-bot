@@ -385,3 +385,5 @@ def filter_spam_messages(message):
     spam_keywords = ["http", "https", "www", "t.me", ".com", ".me", "₹", "free", "click", "promo", "join", "channel", "offer", "mil jayga"]
     if any(word in message.text.lower() for word in spam_keywords):
         bot.reply_to
+
+bot.infinity_polling()
