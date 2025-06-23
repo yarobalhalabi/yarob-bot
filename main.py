@@ -37,7 +37,7 @@ prices_freefire = {
     "2200": "200,000"
 }
 
-# اشتراكات ببجي مع الأسعار (مرتبة وبنفس تنسيق الشدات)
+# اشتراكات ببجي
 subscriptions_pubg = {
     "برايم": "14,000",
     "برايم بلس": "140,000",
@@ -45,7 +45,7 @@ subscriptions_pubg = {
     "حزمة الشعار الخرافي": "62,000"
 }
 
-# اشتراكات فري فاير مع الأسعار
+# اشتراكات فري فاير
 subscriptions_freefire = {
     "عضوية أسبوعية": "26,000",
     "عضوية شهرية": "77,000",
@@ -54,11 +54,6 @@ subscriptions_freefire = {
 
 def clear_user_data(user_id):
     user_data.pop(user_id, None)
-
-def back_button():
-    markup = types.InlineKeyboardMarkup()
-    markup.add(types.InlineKeyboardButton("🔙 رجوع", callback_data="back"))
-    return markup
 
 @bot.message_handler(commands=['on'])
 def activate_bot(message):
@@ -86,7 +81,7 @@ def send_welcome(message):
         return
 
     clear_user_data(user_id)
-    user_data[user_id] = {"step": "start"}
+    user_data[user_id] = []
     welcome_text = "👋 أهلاً بك في متجر YAROB لشحن الألعاب 💳\n🔽 اختر اللعبة التي ترغب بشحنها:"
     markup = types.InlineKeyboardMarkup()
     markup.add(
@@ -102,19 +97,22 @@ def go_back(call):
         bot.answer_callback_query(call.id, "🚫 البوت متوقف حالياً.")
         return
 
-    step = user_data.get(user_id, {}).get("step", "start")
+    if not user_data.get(user_id):
+        send_welcome(call.message)
+        return
+
+    last_order = user_data[user_id][-1] if user_data[user_id] else {}
+    step = last_order.get("step", "start")
 
     if step in ["pubg_shd", "pubg_sub", "pubg_menu"]:
-        user_data[user_id]["step"] = "choose_game"
+        last_order["step"] = "choose_game"
         send_game_options(call.message, "pubg")
     elif step in ["freefire_shd", "freefire_sub", "freefire_menu"]:
-        user_data[user_id]["step"] = "choose_game"
+        last_order["step"] = "choose_game"
         send_game_options(call.message, "freefire")
     elif step == "choose_game":
-        user_data[user_id]["step"] = "start"
         send_welcome(call.message)
     else:
-        user_data[user_id]["step"] = "start"
         send_welcome(call.message)
 
 def send_game_options(message, game):
@@ -125,14 +123,14 @@ def send_game_options(message, game):
         markup.add(types.InlineKeyboardButton("🎫 اشتراكات", callback_data="pubg_sub"))
         markup.add(types.InlineKeyboardButton("🔙 رجوع", callback_data="back"))
         bot.edit_message_text("🎮 اختر القسم في PUBG:", chat_id=user_id, message_id=message.message_id, reply_markup=markup)
-        user_data[user_id]["step"] = "pubg_menu"
+        user_data[user_id][-1]["step"] = "pubg_menu"
     else:
         markup = types.InlineKeyboardMarkup()
         markup.add(types.InlineKeyboardButton("💎 جواهر", callback_data="freefire_shd"))
         markup.add(types.InlineKeyboardButton("🎫 اشتراكات", callback_data="freefire_sub"))
         markup.add(types.InlineKeyboardButton("🔙 رجوع", callback_data="back"))
         bot.edit_message_text("🎮 اختر القسم في Free Fire:", chat_id=user_id, message_id=message.message_id, reply_markup=markup)
-        user_data[user_id]["step"] = "freefire_menu"
+        user_data[user_id][-1]["step"] = "freefire_menu"
 
 @bot.callback_query_handler(func=lambda call: call.data in ["pubg", "freefire"])
 def choose_game(call):
@@ -143,7 +141,9 @@ def choose_game(call):
         return
 
     user_id = call.from_user.id
-    user_data[user_id] = {'game': call.data, "step": "choose_game"}
+    if user_id not in user_data:
+        user_data[user_id] = []
+    user_data[user_id].append({'game': call.data, "step": "choose_game"})
     send_game_options(call.message, call.data)
 
 @bot.callback_query_handler(func=lambda call: call.data in ["pubg_shd", "pubg_sub", "freefire_shd", "freefire_sub"])
@@ -153,12 +153,13 @@ def choose_section(call):
         return
 
     user_id = call.from_user.id
-    game = user_data[user_id]['game']
+    last_order = user_data[user_id][-1]
+    game = last_order['game']
 
     if call.data == "pubg_shd":
         prices = prices_pubg
         unit = "UC"
-        user_data[user_id]["step"] = "pubg_shd"
+        last_order["step"] = "pubg_shd"
         text = "🪙 اختر كمية الشدات التي تريد شحنها:"
         markup = types.InlineKeyboardMarkup()
         for amount, price in prices.items():
@@ -168,7 +169,7 @@ def choose_section(call):
 
     elif call.data == "pubg_sub":
         subs = subscriptions_pubg
-        user_data[user_id]["step"] = "pubg_sub"
+        last_order["step"] = "pubg_sub"
         text = "🎫 اختر الاشتراك الذي تريده:"
         markup = types.InlineKeyboardMarkup()
         for name, price in subs.items():
@@ -179,7 +180,7 @@ def choose_section(call):
     elif call.data == "freefire_shd":
         prices = prices_freefire
         unit = "💎"
-        user_data[user_id]["step"] = "freefire_shd"
+        last_order["step"] = "freefire_shd"
         text = "💎 اختر كمية الجواهر التي تريد شحنها:"
         markup = types.InlineKeyboardMarkup()
         for amount, price in prices.items():
@@ -189,7 +190,7 @@ def choose_section(call):
 
     elif call.data == "freefire_sub":
         subs = subscriptions_freefire
-        user_data[user_id]["step"] = "freefire_sub"
+        last_order["step"] = "freefire_sub"
         text = "🎫 اختر الاشتراك الذي تريده:"
         markup = types.InlineKeyboardMarkup()
         for name, price in subs.items():
@@ -205,7 +206,8 @@ def handle_shd_selection(call):
 
     user_id = call.from_user.id
     data = call.data.split("_")
-    game = user_data[user_id]['game']
+    last_order = user_data[user_id][-1]
+    game = last_order['game']
     amount = data[2]
     if game == "pubg":
         price = prices_pubg.get(amount)
@@ -214,7 +216,7 @@ def handle_shd_selection(call):
         price = prices_freefire.get(amount)
         unit = "💎"
 
-    user_data[user_id].update({'amount': amount, "step": "choose_amount", "type": "shd"})
+    last_order.update({'amount': amount, "step": "choose_amount", "type": "shd"})
     payment_text = (
         f"💰 السعر: {price} ل.س\n\n"
         f"📱 يرجى التحويل عبر سيرياتيل كاش (تحويل يدوي) إلى أحد الأرقام التالية:\n"
@@ -234,16 +236,15 @@ def handle_sub_selection(call):
     user_id = call.from_user.id
     data = call.data.split("_", 2)
     sub_name = data[2]
+    last_order = user_data[user_id][-1]
     if data[0] == "pubg":
         price = subscriptions_pubg.get(sub_name)
-        unit = "اشتراك"
-        user_data[user_id]['game'] = "pubg"
+        last_order['game'] = "pubg"
     else:
         price = subscriptions_freefire.get(sub_name)
-        unit = "اشتراك"
-        user_data[user_id]['game'] = "freefire"
+        last_order['game'] = "freefire"
 
-    user_data[user_id].update({'amount': price, "step": "choose_amount", "type": "sub", "subscription_name": sub_name})
+    last_order.update({'amount': price, "step": "choose_amount", "type": "sub", "subscription_name": sub_name})
     payment_text = (
         f"💰 السعر: {price} ل.س\n\n"
         f"📱 يرجى التحويل عبر سيرياتيل كاش (تحويل يدوي) إلى أحد الأرقام التالية:\n"
@@ -262,9 +263,11 @@ def get_transaction_number(message):
 
     if not message.text.isdigit():
         bot.send_message(user_id, "⚠️ الرجاء إدخال رقم العملية بشكل رقمي فقط.")
-        return bot.register_next_step_handler_by_chat_id(user_id, get_transaction_number)
-    user_data[user_id]['transaction_number'] = message.text
-    user_data[user_id]["step"] = "transaction_number"
+        bot.register_next_step_handler_by_chat_id(user_id, get_transaction_number)
+        return
+    last_order = user_data[user_id][-1]
+    last_order['transaction_number'] = message.text
+    last_order["step"] = "transaction_number"
     bot.send_message(user_id, "📞 الرجاء إدخال الرقم الذي قمت بالتحويل عليه (`16954304` أو `81827789`):")
     bot.register_next_step_handler_by_chat_id(user_id, get_target_number)
 
@@ -276,9 +279,11 @@ def get_target_number(message):
 
     if message.text not in ["16954304", "81827789"]:
         bot.send_message(user_id, "⚠️ الرقم غير صحيح، الرجاء إدخال أحد الرقمين فقط.")
-        return bot.register_next_step_handler_by_chat_id(user_id, get_target_number)
-    user_data[user_id]['target_number'] = message.text
-    user_data[user_id]["step"] = "target_number"
+        bot.register_next_step_handler_by_chat_id(user_id, get_target_number)
+        return
+    last_order = user_data[user_id][-1]
+    last_order['target_number'] = message.text
+    last_order["step"] = "target_number"
     bot.send_message(user_id, "🎮 أرسل الآن ID حسابك داخل اللعبة:")
     bot.register_next_step_handler_by_chat_id(user_id, get_game_id)
 
@@ -288,9 +293,11 @@ def get_game_id(message):
         bot.send_message(user_id, "🚫 البوت متوقف حالياً.")
         return
 
-    if user_data[user_id]['type'] == 'sub':
+    last_order = user_data[user_id][-1]
+
+    if last_order['type'] == 'sub':
         # اشتراكات ما بتحتاج ID اللعبة
-        data = user_data[user_id]
+        data = last_order
         data["step"] = "game_id"
 
         final_message = (
@@ -307,18 +314,21 @@ def get_game_id(message):
         # شدات تحتاج ID اللعبة
         if not message.text.isdigit():
             bot.send_message(user_id, "⚠️ الرجاء إدخال ID اللعبة بشكل رقمي فقط.")
-            return bot.register_next_step_handler_by_chat_id(user_id, get_game_id)
+            bot.register_next_step_handler_by_chat_id(user_id, get_game_id)
+            return
 
-        data = user_data[user_id]
+        data = last_order
         data['game_id'] = message.text
         data["step"] = "game_id"
+
+        unit = "UC" if data['game'] == 'pubg' else "💎"
 
         final_message = (
             f"🆕 طلب شحن جديد:\n"
             f"👤 المستخدم: @{message.from_user.username or 'بدون يوزر'}\n"
             f"🆔 تيليجرام: {user_id}\n"
             f"🎮 ID اللعبة: {data['game_id']}\n"
-            f"🎯 الكمية: {data['amount']} {('UC' if data['game'] == 'pubg' else '💎') if data['type'] == 'shd' else ''}\n"
+            f"🎯 الكمية: {data['amount']} {unit if data['type'] == 'shd' else ''}\n"
             f"📞 الرقم المحوّل عليه: {data['target_number']}\n"
             f"🔢 رقم العملية: {data['transaction_number']}"
         )
@@ -340,14 +350,18 @@ def confirm_delivery(call):
     user_id = int(parts[1])
     transaction_number = parts[2]
 
-    data = user_data.get(user_id, {})
+    orders = user_data.get(user_id, [])
+    data = next((order for order in orders if order.get('transaction_number') == transaction_number), None)
+    if not data:
+        bot.answer_callback_query(call.id, "⚠️ لم يتم العثور على الطلب.")
+        return
+
     game = data.get("game", "unknown")
     amount = data.get("amount", "?")
     game_id = data.get("game_id", "غير معروف")
     type_ = data.get("type", "shd")
     unit = "UC" if game == "pubg" else "💎"
 
-    # رسالة تأكيد خاصة حسب نوع الطلب
     if type_ == "sub":
         sub_name = data.get("subscription_name", "اشتراك")
         confirm_msg = f"تم تفعيل اشتراكك **{sub_name}** بنجاح ✅ شكراً لتعاملك معنا 🌟"
@@ -374,5 +388,4 @@ def filter_spam_messages(message):
     if any(word in message.text.lower() for word in spam_keywords):
         bot.reply_to(message, "🚫 ممنوع إرسال روابط أو كلمات غير مناسبة هنا.")
 
-keep_alive()
 bot.infinity_polling()
