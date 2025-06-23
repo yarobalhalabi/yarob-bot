@@ -103,19 +103,18 @@ def go_back(call):
         return
     step = user_data.get(user_id, {}).get("step", "start")
 
-    # الرجوع خطوة واحدة حسب الخطوة الحالية
-    if step.startswith("pubg_"):
-        # من أقسام شدات أو اشتراكات ببجي للعبة
-        send_game_options(call.message, "pubg")
-        user_data[user_id]["step"] = "choose_game"
-    elif step.startswith("freefire_"):
-        # من أقسام شدات أو اشتراكات فري فاير للعبة
-        send_game_options(call.message, "freefire")
-        user_data[user_id]["step"] = "choose_game"
+    if step in ["pubg_menu", "pubg_shd", "pubg_sub"]:
+        send_welcome(call.message)
+        user_data[user_id]["step"] = "start"
+    elif step in ["freefire_menu", "freefire_shd", "freefire_sub"]:
+        send_welcome(call.message)
+        user_data[user_id]["step"] = "start"
     elif step == "choose_game":
         send_welcome(call.message)
+        user_data[user_id]["step"] = "start"
     else:
         send_welcome(call.message)
+        user_data[user_id]["step"] = "start"
 
 def send_game_options(message, game):
     user_id = message.chat.id
@@ -125,14 +124,14 @@ def send_game_options(message, game):
         markup.add(types.InlineKeyboardButton("🎫 اشتراكات", callback_data="pubg_sub"))
         markup.add(types.InlineKeyboardButton("🔙 رجوع", callback_data="back"))
         bot.edit_message_text("🎮 اختر القسم في PUBG:", chat_id=user_id, message_id=message.message_id, reply_markup=markup)
-        user_data[user_id]["step"] = "choose_game"
+        user_data[user_id]["step"] = "pubg_menu"
     else:
         markup = types.InlineKeyboardMarkup()
         markup.add(types.InlineKeyboardButton("💎 جواهر", callback_data="freefire_shd"))
         markup.add(types.InlineKeyboardButton("🎫 اشتراكات", callback_data="freefire_sub"))
         markup.add(types.InlineKeyboardButton("🔙 رجوع", callback_data="back"))
         bot.edit_message_text("🎮 اختر القسم في Free Fire:", chat_id=user_id, message_id=message.message_id, reply_markup=markup)
-        user_data[user_id]["step"] = "choose_game"
+        user_data[user_id]["step"] = "freefire_menu"
 
 @bot.callback_query_handler(func=lambda call: call.data in ["pubg", "freefire"])
 def choose_game(call):
@@ -363,20 +362,8 @@ def fail_delivery(call):
         return
 
     user_id = int(call.data.split("_")[1])
-    markup = types.InlineKeyboardMarkup()
-    markup.add(types.InlineKeyboardButton("▶️ لإعادة المحاولة اضغط /start", callback_data='retry'))
     fail_text = "❌ فشلت العملية\nيرجى التأكد من صحة المعلومات، ثم اضغط /start لإعادة المحاولة."
-    bot.send_message(user_id, fail_text, reply_markup=markup)
-
-@bot.callback_query_handler(func=lambda call: call.data == 'retry')
-def retry_order(call):
-    if not BOT_ACTIVE:
-        bot.edit_message_text("❌ البوت متوقف حالياً، لا يمكن إتمام الطلب الآن. يرجى المحاولة لاحقاً.",
-                              chat_id=call.message.chat.id,
-                              message_id=call.message.message_id)
-        return
-    clear_user_data(call.from_user.id)
-    send_welcome(call.message)
+    bot.send_message(user_id, fail_text)
 
 @bot.message_handler(func=lambda message: True, content_types=['text'])
 def filter_spam_messages(message):
@@ -384,6 +371,7 @@ def filter_spam_messages(message):
         return
     spam_keywords = ["http", "https", "www", "t.me", ".com", ".me", "₹", "free", "click", "promo", "join", "channel", "offer", "mil jayga"]
     if any(word in message.text.lower() for word in spam_keywords):
-        bot.reply_to
+        bot.reply_to(message, "🚫 ممنوع إرسال روابط أو كلمات غير مناسبة هنا.")
 
+keep_alive()
 bot.infinity_polling()
