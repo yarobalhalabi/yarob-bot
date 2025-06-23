@@ -75,6 +75,10 @@ def send_welcome(message):
 
 @bot.callback_query_handler(func=lambda call: call.data in ["pubg", "freefire"])
 def choose_game(call):
+    if not BOT_ACTIVE:
+        bot.answer_callback_query(call.id, "🚫 البوت متوقف حالياً.")
+        return
+
     user_id = call.from_user.id
     user_data[user_id] = {'game': call.data, "step": "choose_game"}
 
@@ -96,6 +100,10 @@ def choose_game(call):
 
 @bot.callback_query_handler(func=lambda call: call.data in prices_pubg or call.data in prices_freefire)
 def handle_selection(call):
+    if not BOT_ACTIVE:
+        bot.answer_callback_query(call.id, "🚫 البوت متوقف حالياً.")
+        return
+
     user_id = call.from_user.id
     game = user_data[user_id]['game']
     amount = call.data
@@ -114,6 +122,10 @@ def handle_selection(call):
 
 def get_transaction_number(message):
     user_id = message.from_user.id
+    if not BOT_ACTIVE:
+        bot.send_message(user_id, "🚫 البوت متوقف حالياً.")
+        return
+
     if not message.text.isdigit():
         bot.send_message(user_id, "⚠️ الرجاء إدخال رقم العملية بشكل رقمي فقط.")
         return bot.register_next_step_handler_by_chat_id(user_id, get_transaction_number)
@@ -124,6 +136,10 @@ def get_transaction_number(message):
 
 def get_target_number(message):
     user_id = message.from_user.id
+    if not BOT_ACTIVE:
+        bot.send_message(user_id, "🚫 البوت متوقف حالياً.")
+        return
+
     if message.text not in ["16954304", "81827789"]:
         bot.send_message(user_id, "⚠️ الرقم غير صحيح، الرجاء إدخال أحد الرقمين فقط.")
         return bot.register_next_step_handler_by_chat_id(user_id, get_target_number)
@@ -134,6 +150,10 @@ def get_target_number(message):
 
 def get_game_id(message):
     user_id = message.from_user.id
+    if not BOT_ACTIVE:
+        bot.send_message(user_id, "🚫 البوت متوقف حالياً.")
+        return
+
     if not message.text.isdigit():
         bot.send_message(user_id, "⚠️ الرجاء إدخال ID اللعبة بشكل رقمي فقط.")
         return bot.register_next_step_handler_by_chat_id(user_id, get_game_id)
@@ -195,11 +215,16 @@ def fail_delivery(call):
 
 @bot.callback_query_handler(func=lambda call: call.data == 'retry')
 def retry_order(call):
+    if not BOT_ACTIVE:
+        bot.answer_callback_query(call.id, "🚫 البوت متوقف حالياً.")
+        return
     clear_user_data(call.from_user.id)
     send_welcome(call.message)
 
 @bot.message_handler(func=lambda message: True, content_types=['text'])
 def filter_spam_messages(message):
+    if not BOT_ACTIVE:
+        return
     spam_keywords = ["http", "https", "www", "t.me", ".com", ".me", "₹", "free", "click", "promo", "join", "channel", "offer", "mil jayga"]
     if any(word in message.text.lower() for word in spam_keywords):
         bot.reply_to(message, "🚫 يمنع إرسال الروابط أو الرسائل الدعائية داخل البوت.")
