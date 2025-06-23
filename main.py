@@ -116,7 +116,6 @@ def go_back(call):
     else:
         user_data[user_id]["step"] = "start"
         send_welcome(call.message)
-"start"
 
 def send_game_options(message, game):
     user_id = message.chat.id
