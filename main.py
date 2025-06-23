@@ -101,20 +101,22 @@ def go_back(call):
     if not BOT_ACTIVE:
         bot.answer_callback_query(call.id, "🚫 البوت متوقف حالياً.")
         return
+
     step = user_data.get(user_id, {}).get("step", "start")
 
-    if step in ["pubg_menu", "pubg_shd", "pubg_sub"]:
-        send_welcome(call.message)
-        user_data[user_id]["step"] = "start"
-    elif step in ["freefire_menu", "freefire_shd", "freefire_sub"]:
-        send_welcome(call.message)
-        user_data[user_id]["step"] = "start"
+    if step in ["pubg_shd", "pubg_sub", "pubg_menu"]:
+        user_data[user_id]["step"] = "choose_game"
+        send_game_options(call.message, "pubg")
+    elif step in ["freefire_shd", "freefire_sub", "freefire_menu"]:
+        user_data[user_id]["step"] = "choose_game"
+        send_game_options(call.message, "freefire")
     elif step == "choose_game":
-        send_welcome(call.message)
         user_data[user_id]["step"] = "start"
+        send_welcome(call.message)
     else:
-        send_welcome(call.message)
         user_data[user_id]["step"] = "start"
+        send_welcome(call.message)
+"start"
 
 def send_game_options(message, game):
     user_id = message.chat.id
