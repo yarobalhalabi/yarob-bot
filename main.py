@@ -4,13 +4,13 @@ keep_alive()
 import telebot
 from telebot import types
 import os
+import shelve
 
 BOT_TOKEN = os.environ.get('BOT_TOKEN')
 ADMIN_ID = 7188219652
 
 BOT_ACTIVE = True
 bot = telebot.TeleBot(BOT_TOKEN)
-user_data = {}
 
 prices_pubg = {
     "60": "9,500",
@@ -34,8 +34,18 @@ prices_freefire = {
     "2200": "200,000"
 }
 
-def clear_user_data(user_id):
-    user_data.pop(user_id, None)
+def get_user_orders(user_id):
+    with shelve.open("orders_db") as db:
+        return db.get(str(user_id), {})
+
+def save_user_orders(user_id, orders):
+    with shelve.open("orders_db") as db:
+        db[str(user_id)] = orders
+
+def clear_user_orders(user_id):
+    with shelve.open("orders_db") as db:
+        if str(user_id) in db:
+            del db[str(user_id)]
 
 @bot.message_handler(commands=['on'])
 def activate_bot(message):
@@ -61,8 +71,12 @@ def send_welcome(message):
     if not BOT_ACTIVE:
         bot.send_message(user_id, "🚫 البوت متوقف حالياً، نشكر تفهمكم ❤️")
         return
-    clear_user_data(user_id)
-    user_data[user_id] = {"step": "start"}
+
+    # امسح الطلب المؤقت 'current' فقط بدون حذف كل الطلبات القديمة
+    orders = get_user_orders(user_id)
+    orders['current'] = {"step": "start"}
+    save_user_orders(user_id, orders)
+
     markup = types.InlineKeyboardMarkup()
     markup.add(
         types.InlineKeyboardButton("📱 PUBG", callback_data="pubg"),
@@ -77,8 +91,9 @@ def choose_game(call):
         return
 
     user_id = call.from_user.id
-    user_data.setdefault(user_id, {})
-    user_data[user_id]['current'] = {'game': call.data, "step": "choose_game"}
+    orders = get_user_orders(user_id)
+    orders['current'] = {'game': call.data, "step": "choose_game"}
+    save_user_orders(user_id, orders)
 
     game_name = "Pubg" if call.data == "pubg" else "Free"
     price_label = "UC" if call.data == "pubg" else "💎"
@@ -97,13 +112,15 @@ def handle_selection(call):
         return
 
     user_id = call.from_user.id
-    current = user_data[user_id].get('current', {})
+    orders = get_user_orders(user_id)
+    current = orders.get('current', {})
     game = current.get('game')
     prices = prices_pubg if game == "pubg" else prices_freefire
     amount = call.data
 
     current.update({'amount': amount, "step": "choose_amount"})
-    user_data[user_id]['current'] = current
+    orders['current'] = current
+    save_user_orders(user_id, orders)
 
     bot.edit_message_text(
         f"💰 السعر: {prices[amount]} ل.س\n\n"
@@ -121,14 +138,17 @@ def get_transaction_number(message):
         return bot.register_next_step_handler_by_chat_id(user_id, get_transaction_number)
 
     transaction_number = message.text
-    current = user_data[user_id].get('current', {})
-    user_data[user_id][transaction_number] = {
+    orders = get_user_orders(user_id)
+    current = orders.get('current', {})
+
+    orders[transaction_number] = {
         "transaction_number": transaction_number,
         "step": "transaction_number",
         "game": current.get("game"),
         "amount": current.get("amount")
     }
-    user_data[user_id]['current'] = {}
+    orders['current'] = {}
+    save_user_orders(user_id, orders)
 
     bot.send_message(user_id, "📞 الرجاء إدخال الرقم الذي قمت بالتحويل عليه (`16954304` أو `81827789`):")
     bot.register_next_step_handler_by_chat_id(user_id, lambda msg: get_target_number(msg, transaction_number))
@@ -139,8 +159,11 @@ def get_target_number(message, transaction_number):
         bot.send_message(user_id, "⚠️ الرقم غير صحيح، الرجاء إدخال أحد الرقمين فقط.")
         return bot.register_next_step_handler_by_chat_id(user_id, lambda msg: get_target_number(msg, transaction_number))
 
-    user_data[user_id][transaction_number]["target_number"] = message.text
-    user_data[user_id][transaction_number]["step"] = "target_number"
+    orders = get_user_orders(user_id)
+    orders[transaction_number]["target_number"] = message.text
+    orders[transaction_number]["step"] = "target_number"
+    save_user_orders(user_id, orders)
+
     bot.send_message(user_id, "🎮 أرسل الآن ID حسابك داخل اللعبة:")
     bot.register_next_step_handler_by_chat_id(user_id, lambda msg: get_game_id(msg, transaction_number))
 
@@ -150,9 +173,10 @@ def get_game_id(message, transaction_number):
         bot.send_message(user_id, "⚠️ الرجاء إدخال ID اللعبة بشكل رقمي فقط.")
         return bot.register_next_step_handler_by_chat_id(user_id, lambda msg: get_game_id(msg, transaction_number))
 
-    data = user_data[user_id][transaction_number]
-    data['game_id'] = message.text
-    data["step"] = "game_id"
+    orders = get_user_orders(user_id)
+    orders[transaction_number]['game_id'] = message.text
+    orders[transaction_number]["step"] = "game_id"
+    save_user_orders(user_id, orders)
 
     markup = types.InlineKeyboardMarkup()
     markup.add(
@@ -164,9 +188,9 @@ def get_game_id(message, transaction_number):
         f"🆕 طلب شحن جديد:\n"
         f"👤 المستخدم: @{message.from_user.username or 'بدون يوزر'}\n"
         f"🆔 تيليجرام: {user_id}\n"
-        f"🎮 ID اللعبة: {data['game_id']}\n"
-        f"🎯 الكمية: {data['amount']} {data['game']}\n"
-        f"📞 الرقم المحوّل عليه: {data['target_number']}\n"
+        f"🎮 ID اللعبة: {orders[transaction_number]['game_id']}\n"
+        f"🎯 الكمية: {orders[transaction_number]['amount']} {orders[transaction_number]['game']}\n"
+        f"📞 الرقم المحوّل عليه: {orders[transaction_number]['target_number']}\n"
         f"🔢 رقم العملية: {transaction_number}",
         reply_markup=markup
     )
@@ -179,7 +203,8 @@ def confirm_delivery(call):
     try:
         _, user_id_str, transaction_number = call.data.split("|", 2)
         user_id = int(user_id_str)
-        data = user_data.get(user_id, {}).get(transaction_number)
+        orders = get_user_orders(user_id)
+        data = orders.get(transaction_number)
 
         if not data:
             bot.send_message(ADMIN_ID, f"❌ لم يتم العثور على بيانات الطلب لرقم العملية: {transaction_number}")
@@ -189,6 +214,10 @@ def confirm_delivery(call):
         confirm_msg = f"تم شحن حسابك بـ {data['amount']} {unit} على الـ ID التالي: 📱{data['game_id']} بنجاح ✅  شكراً لتعاملك معنا 🌟"
         bot.send_message(user_id, confirm_msg)
         bot.send_message(ADMIN_ID, f"📦 تم الشحن إلى رقم العملية: {transaction_number}")
+
+        # امسح الطلب بعد التأكيد
+        del orders[transaction_number]
+        save_user_orders(user_id, orders)
 
     except Exception as e:
         bot.send_message(ADMIN_ID, f"❗ حدث خطأ أثناء تأكيد العملية: {e}")
@@ -208,7 +237,9 @@ def retry_order(call):
     if not BOT_ACTIVE:
         bot.edit_message_text("❌ البوت متوقف حالياً.", chat_id=call.message.chat.id, message_id=call.message.message_id)
         return
-    clear_user_data(call.from_user.id)
+    orders = get_user_orders(call.from_user.id)
+    orders['current'] = {"step": "start"}
+    save_user_orders(call.from_user.id, orders)
     send_welcome(call.message)
 
 @bot.message_handler(func=lambda message: True, content_types=['text'])
@@ -220,12 +251,12 @@ def filter_spam_messages(message):
         bot.reply_to(message, "🚫 يمنع إرسال الروابط أو الرسائل الدعائية داخل البوت.")
         return
     current_step = None
-    user = user_data.get(message.from_user.id)
-    if isinstance(user, dict):
-        if 'current' in user:
-            current_step = user['current'].get('step')
+    orders = get_user_orders(message.from_user.id)
+    if isinstance(orders, dict):
+        if 'current' in orders:
+            current_step = orders['current'].get('step')
         else:
-            for key, val in user.items():
+            for key, val in orders.items():
                 if isinstance(val, dict) and 'step' in val:
                     current_step = val['step']
                     break
