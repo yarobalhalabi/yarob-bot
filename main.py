@@ -156,8 +156,8 @@ def get_game_id(message, transaction_number):
 
     markup = types.InlineKeyboardMarkup()
     markup.add(
-        types.InlineKeyboardButton("✅ تمت العملية", callback_data=f"confirm_{user_id}_{transaction_number}"),
-        types.InlineKeyboardButton("❌ فشلت العملية", callback_data=f"fail_{user_id}_{transaction_number}")
+        types.InlineKeyboardButton("✅ تمت العملية", callback_data=f"confirm|{user_id}|{transaction_number}"),
+        types.InlineKeyboardButton("❌ فشلت العملية", callback_data=f"fail|{user_id}|{transaction_number}")
     )
 
     bot.send_message(ADMIN_ID,
@@ -172,12 +172,12 @@ def get_game_id(message, transaction_number):
     )
     bot.send_message(user_id, "✅ تم استلام معلوماتك بنجاح! سيتم تنفيذ طلبك قريبًا 💚")
 
-@bot.callback_query_handler(func=lambda call: call.data.startswith("confirm_"))
+@bot.callback_query_handler(func=lambda call: call.data.startswith("confirm|"))
 def confirm_delivery(call):
     if call.from_user.id != ADMIN_ID:
         return
     try:
-        _, user_id_str, transaction_number = call.data.split("_", 2)
+        _, user_id_str, transaction_number = call.data.split("|", 2)
         user_id = int(user_id_str)
         data = user_data.get(user_id, {}).get(transaction_number)
 
@@ -189,14 +189,15 @@ def confirm_delivery(call):
         confirm_msg = f"تم شحن حسابك بـ {data['amount']} {unit} على الـ ID التالي: 📱{data['game_id']} بنجاح ✅  شكراً لتعاملك معنا 🌟"
         bot.send_message(user_id, confirm_msg)
         bot.send_message(ADMIN_ID, f"📦 تم الشحن إلى رقم العملية: {transaction_number}")
+
     except Exception as e:
         bot.send_message(ADMIN_ID, f"❗ حدث خطأ أثناء تأكيد العملية: {e}")
 
-@bot.callback_query_handler(func=lambda call: call.data.startswith("fail_"))
+@bot.callback_query_handler(func=lambda call: call.data.startswith("fail|"))
 def fail_delivery(call):
     if call.from_user.id != ADMIN_ID:
         return
-    _, user_id_str, transaction_number = call.data.split("_", 2)
+    _, user_id_str, transaction_number = call.data.split("|", 2)
     user_id = int(user_id_str)
     markup = types.InlineKeyboardMarkup()
     markup.add(types.InlineKeyboardButton("▶️ لإعادة المحاولة اضغط start", callback_data='retry'))
@@ -218,7 +219,6 @@ def filter_spam_messages(message):
     if any(word in message.text.lower() for word in spam_keywords):
         bot.reply_to(message, "🚫 يمنع إرسال الروابط أو الرسائل الدعائية داخل البوت.")
         return
-    # التأكد من أن المستخدم ضمن خطوات إدخال مسموحة
     current_step = None
     user = user_data.get(message.from_user.id)
     if isinstance(user, dict):
