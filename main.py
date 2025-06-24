@@ -87,7 +87,7 @@ def send_welcome(message):
 @bot.callback_query_handler(func=lambda call: call.data in ["pubg", "freefire"])
 def choose_game(call):
     if not BOT_ACTIVE:
-        bot.edit_message_text("❌ البوت متوقف حالياً.", chat_id=call.message.chat.id, message_id=call.message.message_id)
+        bot.edit_message_text("🚫 البوت متوقف حالياً، نشكر تفهمكم ❤️", chat_id=call.message.chat.id, message_id=call.message.message_id)
         return
 
     user_id = call.from_user.id
@@ -108,7 +108,7 @@ def choose_game(call):
 @bot.callback_query_handler(func=lambda call: call.data in prices_pubg or call.data in prices_freefire)
 def handle_selection(call):
     if not BOT_ACTIVE:
-        bot.edit_message_text("❌ البوت متوقف حالياً.", chat_id=call.message.chat.id, message_id=call.message.message_id)
+        bot.edit_message_text("🚫 البوت متوقف حالياً، نشكر تفهمكم ❤️", chat_id=call.message.chat.id, message_id=call.message.message_id)
         return
 
     user_id = call.from_user.id
@@ -235,7 +235,7 @@ def fail_delivery(call):
 @bot.callback_query_handler(func=lambda call: call.data == 'retry')
 def retry_order(call):
     if not BOT_ACTIVE:
-        bot.edit_message_text("❌ البوت متوقف حالياً.", chat_id=call.message.chat.id, message_id=call.message.message_id)
+        bot.edit_message_text("🚫 البوت متوقف حالياً، نشكر تفهمكم ❤️", chat_id=call.message.chat.id, message_id=call.message.message_id)
         return
     orders = get_user_orders(call.from_user.id)
     orders['current'] = {"step": "start"}
