@@ -55,10 +55,22 @@ subscriptions_freefire = {
 def clear_user_data(user_id):
     user_data.pop(user_id, None)
 
-def back_button():
-    markup = types.InlineKeyboardMarkup()
-    markup.add(types.InlineKeyboardButton("🔙 رجوع", callback_data="back"))
-    return markup
+def init_user_steps(user_id):
+    if user_id not in user_data:
+        user_data[user_id] = {}
+    if "steps" not in user_data[user_id]:
+        user_data[user_id]["steps"] = []
+
+def push_step(user_id, step_name):
+    init_user_steps(user_id)
+    user_data[user_id]["steps"].append(step_name)
+    user_data[user_id]["step"] = step_name
+
+def pop_step(user_id):
+    init_user_steps(user_id)
+    if len(user_data[user_id]["steps"]) > 1:
+        user_data[user_id]["steps"].pop()  # احذف آخر خطوة (الحالية)
+    return user_data[user_id]["steps"][-1]  # رجع الخطوة الحالية بعد الحذف
 
 @bot.message_handler(commands=['on'])
 def activate_bot(message):
@@ -86,7 +98,8 @@ def send_welcome(message):
         return
 
     clear_user_data(user_id)
-    user_data[user_id] = {"step": "start"}
+    user_data[user_id] = {}
+    push_step(user_id, "start")
     welcome_text = "👋 أهلاً بك في متجر YAROB لشحن الألعاب 💳\n🔽 اختر اللعبة التي ترغب بشحنها:"
     markup = types.InlineKeyboardMarkup()
     markup.add(
@@ -101,37 +114,81 @@ def go_back(call):
     if not BOT_ACTIVE:
         bot.answer_callback_query(call.id, "🚫 البوت متوقف حالياً.")
         return
-    step = user_data.get(user_id, {}).get("step", "start")
 
-    if step in ["pubg_menu", "pubg_shd", "pubg_sub"]:
+    prev_step = pop_step(user_id)
+
+    # بناء على الخطوة السابقة نعرض الواجهة المناسبة
+    if prev_step == "start":
         send_welcome(call.message)
-        user_data[user_id]["step"] = "start"
-    elif step in ["freefire_menu", "freefire_shd", "freefire_sub"]:
-        send_welcome(call.message)
-        user_data[user_id]["step"] = "start"
-    elif step == "choose_game":
-        send_welcome(call.message)
-        user_data[user_id]["step"] = "start"
+    elif prev_step == "pubg_menu":
+        send_game_options(call.message, "pubg", push_step_flag=False)
+    elif prev_step == "freefire_menu":
+        send_game_options(call.message, "freefire", push_step_flag=False)
+    elif prev_step == "pubg_shd":
+        send_shd_options(call.message, "pubg", push_step_flag=False)
+    elif prev_step == "pubg_sub":
+        send_sub_options(call.message, "pubg", push_step_flag=False)
+    elif prev_step == "freefire_shd":
+        send_shd_options(call.message, "freefire", push_step_flag=False)
+    elif prev_step == "freefire_sub":
+        send_sub_options(call.message, "freefire", push_step_flag=False)
     else:
+        # في حال ما عرفنا الخطوة، نرجع للواجهة الرئيسية
         send_welcome(call.message)
-        user_data[user_id]["step"] = "start"
 
-def send_game_options(message, game):
+def send_game_options(message, game, push_step_flag=True):
     user_id = message.chat.id
+    if push_step_flag:
+        push_step(user_id, f"{game}_menu")
+
     if game == "pubg":
         markup = types.InlineKeyboardMarkup()
         markup.add(types.InlineKeyboardButton("🪙 شدات", callback_data="pubg_shd"))
         markup.add(types.InlineKeyboardButton("🎫 اشتراكات", callback_data="pubg_sub"))
         markup.add(types.InlineKeyboardButton("🔙 رجوع", callback_data="back"))
         bot.edit_message_text("🎮 اختر القسم في PUBG:", chat_id=user_id, message_id=message.message_id, reply_markup=markup)
-        user_data[user_id]["step"] = "pubg_menu"
     else:
         markup = types.InlineKeyboardMarkup()
         markup.add(types.InlineKeyboardButton("💎 جواهر", callback_data="freefire_shd"))
         markup.add(types.InlineKeyboardButton("🎫 اشتراكات", callback_data="freefire_sub"))
         markup.add(types.InlineKeyboardButton("🔙 رجوع", callback_data="back"))
         bot.edit_message_text("🎮 اختر القسم في Free Fire:", chat_id=user_id, message_id=message.message_id, reply_markup=markup)
-        user_data[user_id]["step"] = "freefire_menu"
+
+def send_shd_options(message, game, push_step_flag=True):
+    user_id = message.chat.id
+    if push_step_flag:
+        push_step(user_id, f"{game}_shd")
+
+    if game == "pubg":
+        prices = prices_pubg
+        unit = "UC"
+    else:
+        prices = prices_freefire
+        unit = "💎"
+
+    text = f"🪙 اختر كمية {'الشدات' if game=='pubg' else 'الجواهر'} التي تريد شحنها:"
+    markup = types.InlineKeyboardMarkup()
+    for amount, price in prices.items():
+        markup.add(types.InlineKeyboardButton(f"{amount} {unit} - {price} ل.س", callback_data=f"{game}_shd_{amount}"))
+    markup.add(types.InlineKeyboardButton("🔙 رجوع", callback_data="back"))
+    bot.edit_message_text(text, user_id, message.message_id, reply_markup=markup)
+
+def send_sub_options(message, game, push_step_flag=True):
+    user_id = message.chat.id
+    if push_step_flag:
+        push_step(user_id, f"{game}_sub")
+
+    if game == "pubg":
+        subs = subscriptions_pubg
+    else:
+        subs = subscriptions_freefire
+
+    text = "🎫 اختر الاشتراك الذي تريده:"
+    markup = types.InlineKeyboardMarkup()
+    for name, price in subs.items():
+        markup.add(types.InlineKeyboardButton(f"{name} - {price} ل.س", callback_data=f"{game}_sub_{name}"))
+    markup.add(types.InlineKeyboardButton("🔙 رجوع", callback_data="back"))
+    bot.edit_message_text(text, user_id, message.message_id, reply_markup=markup)
 
 @bot.callback_query_handler(func=lambda call: call.data in ["pubg", "freefire"])
 def choose_game(call):
@@ -142,7 +199,8 @@ def choose_game(call):
         return
 
     user_id = call.from_user.id
-    user_data[user_id] = {'game': call.data, "step": "choose_game"}
+    user_data[user_id] = {'game': call.data}
+    push_step(user_id, "choose_game")
     send_game_options(call.message, call.data)
 
 @bot.callback_query_handler(func=lambda call: call.data in ["pubg_shd", "pubg_sub", "freefire_shd", "freefire_sub"])
@@ -155,46 +213,13 @@ def choose_section(call):
     game = user_data[user_id]['game']
 
     if call.data == "pubg_shd":
-        prices = prices_pubg
-        unit = "UC"
-        user_data[user_id]["step"] = "pubg_shd"
-        text = "🪙 اختر كمية الشدات التي تريد شحنها:"
-        markup = types.InlineKeyboardMarkup()
-        for amount, price in prices.items():
-            markup.add(types.InlineKeyboardButton(f"{amount} {unit} - {price} ل.س", callback_data=f"pubg_shd_{amount}"))
-        markup.add(types.InlineKeyboardButton("🔙 رجوع", callback_data="back"))
-        bot.edit_message_text(text, user_id, call.message.message_id, reply_markup=markup)
-
+        send_shd_options(call.message, "pubg")
     elif call.data == "pubg_sub":
-        subs = subscriptions_pubg
-        user_data[user_id]["step"] = "pubg_sub"
-        text = "🎫 اختر الاشتراك الذي تريده:"
-        markup = types.InlineKeyboardMarkup()
-        for name, price in subs.items():
-            markup.add(types.InlineKeyboardButton(f"{name} - {price} ل.س", callback_data=f"pubg_sub_{name}"))
-        markup.add(types.InlineKeyboardButton("🔙 رجوع", callback_data="back"))
-        bot.edit_message_text(text, user_id, call.message.message_id, reply_markup=markup)
-
+        send_sub_options(call.message, "pubg")
     elif call.data == "freefire_shd":
-        prices = prices_freefire
-        unit = "💎"
-        user_data[user_id]["step"] = "freefire_shd"
-        text = "💎 اختر كمية الجواهر التي تريد شحنها:"
-        markup = types.InlineKeyboardMarkup()
-        for amount, price in prices.items():
-            markup.add(types.InlineKeyboardButton(f"{amount} {unit} - {price} ل.س", callback_data=f"freefire_shd_{amount}"))
-        markup.add(types.InlineKeyboardButton("🔙 رجوع", callback_data="back"))
-        bot.edit_message_text(text, user_id, call.message.message_id, reply_markup=markup)
-
+        send_shd_options(call.message, "freefire")
     elif call.data == "freefire_sub":
-        subs = subscriptions_freefire
-        user_data[user_id]["step"] = "freefire_sub"
-        text = "🎫 اختر الاشتراك الذي تريده:"
-        markup = types.InlineKeyboardMarkup()
-        for name, price in subs.items():
-            markup.add(types.InlineKeyboardButton(f"{name} - {price} ل.س", callback_data=f"freefire_sub_{name}"))
-        markup.add(types.InlineKeyboardButton("🔙 رجوع", callback_data="back"))
-        bot.edit_message_text(text, user_id, call.message.message_id, reply_markup=markup)
+        send_sub_options(call.message, "freefire")
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("pubg_shd_") or call.data.startswith("freefire_shd_"))
 def handle_shd_selection(call):
@@ -235,11 +260,9 @@ def handle_sub_selection(call):
     sub_name = data[2]
     if data[0] == "pubg":
         price = subscriptions_pubg.get(sub_name)
-        unit = "اشتراك"
         user_data[user_id]['game'] = "pubg"
     else:
         price = subscriptions_freefire.get(sub_name)
-        unit = "اشتراك"
         user_data[user_id]['game'] = "freefire"
 
     user_data[user_id].update({'amount': price, "step": "choose_amount", "type": "sub", "subscription_name": sub_name})
@@ -288,7 +311,6 @@ def get_game_id(message):
         return
 
     if user_data[user_id]['type'] == 'sub':
-        # اشتراكات ما بتحتاج ID اللعبة
         data = user_data[user_id]
         data["step"] = "game_id"
 
@@ -303,7 +325,6 @@ def get_game_id(message):
             f"🔢 رقم العملية: {data['transaction_number']}"
         )
     else:
-        # شدات تحتاج ID اللعبة
         if not message.text.isdigit():
             bot.send_message(user_id, "⚠️ الرجاء إدخال ID اللعبة بشكل رقمي فقط.")
             return bot.register_next_step_handler_by_chat_id(user_id, get_game_id)
@@ -346,7 +367,6 @@ def confirm_delivery(call):
     type_ = data.get("type", "shd")
     unit = "UC" if game == "pubg" else "💎"
 
-    # رسالة تأكيد خاصة حسب نوع الطلب
     if type_ == "sub":
         sub_name = data.get("subscription_name", "اشتراك")
         confirm_msg = f"تم تفعيل اشتراكك **{sub_name}** بنجاح ✅ شكراً لتعاملك معنا 🌟"
