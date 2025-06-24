@@ -9,7 +9,6 @@ BOT_TOKEN = os.environ.get('BOT_TOKEN')
 ADMIN_ID = 7188219652
 
 BOT_ACTIVE = True
-
 bot = telebot.TeleBot(BOT_TOKEN)
 user_data = {}
 
@@ -62,108 +61,80 @@ def send_welcome(message):
     if not BOT_ACTIVE:
         bot.send_message(user_id, "🚫 البوت متوقف حالياً، نشكر تفهمكم ❤️")
         return
-
     clear_user_data(user_id)
     user_data[user_id] = {"step": "start"}
-    welcome_text = "👋 أهلاً بك في متجر YAROB لشحن الألعاب 💳\n🔽 اختر اللعبة التي ترغب بشحنها:"
     markup = types.InlineKeyboardMarkup()
     markup.add(
         types.InlineKeyboardButton("📱 PUBG", callback_data="pubg"),
         types.InlineKeyboardButton("🎮 Free Fire", callback_data="freefire")
     )
-    bot.send_message(user_id, welcome_text, reply_markup=markup)
+    bot.send_message(user_id, "👋 أهلاً بك في متجر YAROB لشحن الألعاب 💳\n🔽 اختر اللعبة التي ترغب بشحنها:", reply_markup=markup)
 
 @bot.callback_query_handler(func=lambda call: call.data in ["pubg", "freefire"])
 def choose_game(call):
     if not BOT_ACTIVE:
-        bot.edit_message_text("❌ البوت متوقف حالياً، لا يمكن إتمام الطلب الآن. يرجى المحاولة لاحقاً.",
-                              chat_id=call.message.chat.id,
-                              message_id=call.message.message_id)
+        bot.edit_message_text("❌ البوت متوقف حالياً.", chat_id=call.message.chat.id, message_id=call.message.message_id)
         return
 
     user_id = call.from_user.id
-    # إذا ما عنده بيانات سابقة، نهيئه كقاموس للحفاظ على طلبات متعددة
-    if user_id not in user_data:
-        user_data[user_id] = {}
-
-    # هذا المفتاح للحالة الحالية فقط، مش البيانات الدائمة للطلبات
+    user_data.setdefault(user_id, {})
     user_data[user_id]['current'] = {'game': call.data, "step": "choose_game"}
 
-    if call.data == "pubg":
-        prices = prices_pubg
-        game_name = "Pubg"
-        price_label = "UC"
-    else:
-        prices = prices_freefire
-        game_name = "Free"
-        price_label = "💎"
+    game_name = "Pubg" if call.data == "pubg" else "Free"
+    price_label = "UC" if call.data == "pubg" else "💎"
+    prices = prices_pubg if call.data == "pubg" else prices_freefire
 
-    welcome_text = f"🎁 عروض {game_name} المتوفّرة:\nاختر باقتك:"
     markup = types.InlineKeyboardMarkup()
     for amount, price in prices.items():
         markup.add(types.InlineKeyboardButton(f"{game_name} {amount}{price_label} - {price} ل.س", callback_data=amount))
 
-    bot.edit_message_text(welcome_text, chat_id=user_id, message_id=call.message.message_id, reply_markup=markup)
+    bot.edit_message_text(f"🎁 عروض {game_name} المتوفّرة:\nاختر باقتك:", chat_id=user_id, message_id=call.message.message_id, reply_markup=markup)
 
 @bot.callback_query_handler(func=lambda call: call.data in prices_pubg or call.data in prices_freefire)
 def handle_selection(call):
     if not BOT_ACTIVE:
-        bot.edit_message_text("❌ البوت متوقف حالياً، لا يمكن إتمام الطلب الآن. يرجى المحاولة لاحقاً.",
-                              chat_id=call.message.chat.id,
-                              message_id=call.message.message_id)
+        bot.edit_message_text("❌ البوت متوقف حالياً.", chat_id=call.message.chat.id, message_id=call.message.message_id)
         return
 
     user_id = call.from_user.id
-    current = user_data.get(user_id, {}).get('current', {})
+    current = user_data[user_id].get('current', {})
     game = current.get('game')
-    amount = call.data
     prices = prices_pubg if game == "pubg" else prices_freefire
-    # نحفظ الطلب المؤقت في 'current'
+    amount = call.data
+
     current.update({'amount': amount, "step": "choose_amount"})
     user_data[user_id]['current'] = current
 
-    payment_text = (
+    bot.edit_message_text(
         f"💰 السعر: {prices[amount]} ل.س\n\n"
-        f"📱 يرجى التحويل عبر سيرياتيل كاش (تحويل يدوي) إلى أحد الأرقام التالية:\n"
-        f"• `16954304`\n"
-        f"• `81827789`\n\n"
-        f"بعد التحويل، أرسل رقم العملية:"
+        f"📱 يرجى التحويل عبر سيرياتيل كاش إلى أحد الأرقام التالية:\n• `16954304`\n• `81827789`\n\n"
+        f"ثم أرسل رقم العملية:",
+        chat_id=user_id,
+        message_id=call.message.message_id
     )
-    bot.edit_message_text(payment_text, chat_id=user_id, message_id=call.message.message_id)
     bot.register_next_step_handler_by_chat_id(user_id, get_transaction_number)
 
 def get_transaction_number(message):
     user_id = message.from_user.id
-    if not BOT_ACTIVE:
-        bot.send_message(user_id, "🚫 البوت متوقف حالياً.")
-        return
-
     if not message.text.isdigit():
         bot.send_message(user_id, "⚠️ الرجاء إدخال رقم العملية بشكل رقمي فقط.")
         return bot.register_next_step_handler_by_chat_id(user_id, get_transaction_number)
 
     transaction_number = message.text
-    if user_id not in user_data:
-        user_data[user_id] = {}
-
     current = user_data[user_id].get('current', {})
-    # أنشئ طلب جديد تحت رقم العملية
     user_data[user_id][transaction_number] = {
         "transaction_number": transaction_number,
         "step": "transaction_number",
         "game": current.get("game"),
         "amount": current.get("amount")
     }
-    user_data[user_id]['current'] = {}  # نفرغ الطلب المؤقت
+    user_data[user_id]['current'] = {}
+
     bot.send_message(user_id, "📞 الرجاء إدخال الرقم الذي قمت بالتحويل عليه (`16954304` أو `81827789`):")
     bot.register_next_step_handler_by_chat_id(user_id, lambda msg: get_target_number(msg, transaction_number))
 
 def get_target_number(message, transaction_number):
     user_id = message.from_user.id
-    if not BOT_ACTIVE:
-        bot.send_message(user_id, "🚫 البوت متوقف حالياً.")
-        return
-
     if message.text not in ["16954304", "81827789"]:
         bot.send_message(user_id, "⚠️ الرقم غير صحيح، الرجاء إدخال أحد الرقمين فقط.")
         return bot.register_next_step_handler_by_chat_id(user_id, lambda msg: get_target_number(msg, transaction_number))
@@ -175,10 +146,6 @@ def get_target_number(message, transaction_number):
 
 def get_game_id(message, transaction_number):
     user_id = message.from_user.id
-    if not BOT_ACTIVE:
-        bot.send_message(user_id, "🚫 البوت متوقف حالياً.")
-        return
-
     if not message.text.isdigit():
         bot.send_message(user_id, "⚠️ الرجاء إدخال ID اللعبة بشكل رقمي فقط.")
         return bot.register_next_step_handler_by_chat_id(user_id, lambda msg: get_game_id(msg, transaction_number))
@@ -187,60 +154,58 @@ def get_game_id(message, transaction_number):
     data['game_id'] = message.text
     data["step"] = "game_id"
 
-    final_message = (
-        f"🆕 طلب شحن جديد:\n"
-        f"👤 المستخدم: @{message.from_user.username or 'بدون يوزر'}\n"
-        f"🆔 تيليجرام: {user_id}\n"
-        f"🎮 ID اللعبة: {data['game_id']}\n"
-        f"🎯 الكمية: {data['amount']} {data['game']}\n"
-        f"📞 الرقم المحوّل عليه: {data['target_number']}\n"
-        f"🔢 رقم العملية: {transaction_number}"
-    )
-
     markup = types.InlineKeyboardMarkup()
     markup.add(
         types.InlineKeyboardButton("✅ تمت العملية", callback_data=f"confirm_{user_id}_{transaction_number}"),
         types.InlineKeyboardButton("❌ فشلت العملية", callback_data=f"fail_{user_id}_{transaction_number}")
     )
 
-    bot.send_message(ADMIN_ID, final_message, reply_markup=markup)
+    bot.send_message(ADMIN_ID,
+        f"🆕 طلب شحن جديد:\n"
+        f"👤 المستخدم: @{message.from_user.username or 'بدون يوزر'}\n"
+        f"🆔 تيليجرام: {user_id}\n"
+        f"🎮 ID اللعبة: {data['game_id']}\n"
+        f"🎯 الكمية: {data['amount']} {data['game']}\n"
+        f"📞 الرقم المحوّل عليه: {data['target_number']}\n"
+        f"🔢 رقم العملية: {transaction_number}",
+        reply_markup=markup
+    )
     bot.send_message(user_id, "✅ تم استلام معلوماتك بنجاح! سيتم تنفيذ طلبك قريبًا 💚")
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("confirm_"))
 def confirm_delivery(call):
     if call.from_user.id != ADMIN_ID:
         return
-    _, user_id, transaction_number = call.data.split("_")
-    user_id = int(user_id)
+    try:
+        _, user_id_str, transaction_number = call.data.split("_", 2)
+        user_id = int(user_id_str)
+        data = user_data.get(user_id, {}).get(transaction_number)
 
-    data = user_data.get(user_id, {}).get(transaction_number)
-    if not data:
-        bot.send_message(ADMIN_ID, "❌ لم يتم العثور على بيانات الطلب.")
-        return
+        if not data:
+            bot.send_message(ADMIN_ID, f"❌ لم يتم العثور على بيانات الطلب لرقم العملية: {transaction_number}")
+            return
 
-    unit = "UC" if data["game"] == "pubg" else "💎"
-    confirm_msg = f"تم شحن حسابك بـ {data['amount']} {unit} على الـ ID التالي: 📱{data['game_id']} بنجاح ✅  شكرا لتعاملك معنا 🌟"
-    bot.send_message(user_id, confirm_msg)
-    bot.send_message(ADMIN_ID, f"📦 تم الشحن إلى رقم العملية: {transaction_number}")
+        unit = "UC" if data["game"] == "pubg" else "💎"
+        confirm_msg = f"تم شحن حسابك بـ {data['amount']} {unit} على الـ ID التالي: 📱{data['game_id']} بنجاح ✅  شكراً لتعاملك معنا 🌟"
+        bot.send_message(user_id, confirm_msg)
+        bot.send_message(ADMIN_ID, f"📦 تم الشحن إلى رقم العملية: {transaction_number}")
+    except Exception as e:
+        bot.send_message(ADMIN_ID, f"❗ حدث خطأ أثناء تأكيد العملية: {e}")
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("fail_"))
 def fail_delivery(call):
     if call.from_user.id != ADMIN_ID:
         return
-
-    _, user_id, transaction_number = call.data.split("_")
-    user_id = int(user_id)
+    _, user_id_str, transaction_number = call.data.split("_", 2)
+    user_id = int(user_id_str)
     markup = types.InlineKeyboardMarkup()
     markup.add(types.InlineKeyboardButton("▶️ لإعادة المحاولة اضغط start", callback_data='retry'))
-    fail_text = "❌ فشلت العملية\nيرجى التأكد من صحة المعلومات، ثم اضغط /start لإعادة المحاولة."
-    bot.send_message(user_id, fail_text, reply_markup=markup)
+    bot.send_message(user_id, "❌ فشلت العملية\nيرجى التأكد من صحة المعلومات، ثم اضغط /start لإعادة المحاولة.", reply_markup=markup)
 
 @bot.callback_query_handler(func=lambda call: call.data == 'retry')
 def retry_order(call):
     if not BOT_ACTIVE:
-        bot.edit_message_text("❌ البوت متوقف حالياً، لا يمكن إتمام الطلب الآن. يرجى المحاولة لاحقاً.",
-                              chat_id=call.message.chat.id,
-                              message_id=call.message.message_id)
+        bot.edit_message_text("❌ البوت متوقف حالياً.", chat_id=call.message.chat.id, message_id=call.message.message_id)
         return
     clear_user_data(call.from_user.id)
     send_welcome(call.message)
@@ -253,15 +218,13 @@ def filter_spam_messages(message):
     if any(word in message.text.lower() for word in spam_keywords):
         bot.reply_to(message, "🚫 يمنع إرسال الروابط أو الرسائل الدعائية داخل البوت.")
         return
-    # تحقق من أن المستخدم ضمن خطوات الإدخال المسموحة فقط
+    # التأكد من أن المستخدم ضمن خطوات إدخال مسموحة
     current_step = None
     user = user_data.get(message.from_user.id)
     if isinstance(user, dict):
-        # ممكن يكون 'current' أو طلب رقم العملية
         if 'current' in user:
             current_step = user['current'].get('step')
         else:
-            # إذا في أكثر من طلب مخزن، ما نطبق الرد التلقائي إلا إذا الخطوة معروفة
             for key, val in user.items():
                 if isinstance(val, dict) and 'step' in val:
                     current_step = val['step']
