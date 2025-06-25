@@ -123,12 +123,14 @@ def handle_selection(call):
     save_user_orders(user_id, orders)
 
     bot.edit_message_text(
-        f"💰 السعر: {prices[amount]} ل.س\n\n"
-        f"📱 يرجى التحويل عبر سيرياتيل كاش((تحويل يدوي)) إلى أحد الأرقام التالية:\n  • 16954304      ➡️تحويل يدوي\n  • 81827789      ➡️تحويل يدوي\n\n"
-        f"ثم أرسل رقم العملية:",
-        chat_id=user_id,
-        message_id=call.message.message_id
-    )
+    f"قم بإرسال المبلغ ({prices[amount]} ل.س حسب باقة {amount} { 'UC' if game == 'pubg' else '💎' }) \"تحويل يدوي حصراً\" إلى أحد الرموز التالية:\n\n"
+    f"تحويل يدوي ⬅              16954304\n"
+    f"تحويل يدوي ⬅              81827789\n\n"
+    f"ملاحظة🚨 : يرجى ارسال المبلغ تحويل يدوي وليس دفع يدوي\n\n"
+    f"ثم أرسل رقم عملية التحويل:",
+    chat_id=user_id,
+    message_id=call.message.message_id
+)
     bot.register_next_step_handler_by_chat_id(user_id, get_transaction_number)
 
 def get_transaction_number(message):
