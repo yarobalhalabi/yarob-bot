@@ -52,24 +52,24 @@ def activate_bot(message):
     global BOT_ACTIVE
     if message.from_user.id == ADMIN_ID:
         BOT_ACTIVE = True
-        bot.send_message(message.chat.id, "âœ… ØªÙ… ØªÙØ¹ÙŠÙ„ Ø§Ù„Ø¨ÙˆØª.")
+        bot.send_message(message.chat.id, "✅ تم تفعيل البوت.")
     else:
-        bot.send_message(message.chat.id, "ðŸš« Ù‡Ø°Ø§ Ø§Ù„Ø£Ù…Ø± Ù…Ø®ØµØµ Ù„Ù„Ø¥Ø¯Ø§Ø±Ø© ÙÙ‚Ø·.")
+        bot.send_message(message.chat.id, "🚫 هذا الأمر مخصّص للإدارة فقط.")
 
 @bot.message_handler(commands=['off'])
 def deactivate_bot(message):
     global BOT_ACTIVE
     if message.from_user.id == ADMIN_ID:
         BOT_ACTIVE = False
-        bot.send_message(message.chat.id, "â›” ØªÙ… Ø¥ÙŠÙ‚Ø§Ù Ø§Ù„Ø¨ÙˆØª.")
+        bot.send_message(message.chat.id, "⛔ تم إيقاف البوت.")
     else:
-        bot.send_message(message.chat.id, "ðŸš« Ù‡Ø°Ø§ Ø§Ù„Ø£Ù…Ø± Ù…Ø®ØµØµ Ù„Ù„Ø¥Ø¯Ø§Ø±Ø© ÙÙ‚Ø·.")
+        bot.send_message(message.chat.id, "🚫 هذا الأمر مخصّص للإدارة فقط.")
 
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
     user_id = message.from_user.id
     if not BOT_ACTIVE:
-        bot.send_message(user_id, "ðŸš« Ø§Ù„Ø¨ÙˆØª Ù…ØªÙˆÙ‚Ù Ø­Ø§Ù„ÙŠØ§Ù‹ØŒ Ù†Ø´ÙƒØ± ØªÙÙ‡Ù…ÙƒÙ… â¤ï¸")
+        bot.send_message(user_id, "🚫 البوت متوقف حالياً، شكراً لتفهمكم ❤")
         return
 
     orders = get_user_orders(user_id)
@@ -78,15 +78,15 @@ def send_welcome(message):
 
     markup = types.InlineKeyboardMarkup()
     markup.add(
-        types.InlineKeyboardButton("ðŸ“± PUBG", callback_data="pubg"),
-        types.InlineKeyboardButton("ðŸŽ® Free Fire", callback_data="freefire")
+        types.InlineKeyboardButton("📝 PUBG", callback_data="pubg"),
+        types.InlineKeyboardButton("🎮 Free Fire", callback_data="freefire")
     )
-    bot.send_message(user_id, "ðŸ‘‹ Ø£Ù‡Ù„Ø§Ù‹ Ø¨Ùƒ ÙÙŠ Ù…ØªØ¬Ø± YAROB Ù„Ø´Ø­Ù† Ø§Ù„Ø£Ù„Ø¹Ø§Ø¨ ðŸ’³\nðŸ”½ Ø§Ø®ØªØ± Ø§Ù„Ù„Ø¹Ø¨Ø© Ø§Ù„ØªÙŠ ØªØ±ØºØ¨ Ø¨Ø´Ø­Ù†Ù‡Ø§:", reply_markup=markup)
+    bot.send_message(user_id, "👋 أهلاً بك في متجر YAROB لشحن الألعاب 💳\n🔝 اختر اللعبة التي ترغب بشحنها:", reply_markup=markup)
 
 @bot.callback_query_handler(func=lambda call: call.data in ["pubg", "freefire"])
 def choose_game(call):
     if not BOT_ACTIVE:
-        bot.edit_message_text("ðŸš« Ø§Ù„Ø¨ÙˆØª Ù…ØªÙˆÙ‚Ù Ø­Ø§Ù„ÙŠØ§Ù‹ØŒ Ù†Ø´ÙƒØ± ØªÙÙ‡Ù…ÙƒÙ… â¤ï¸", chat_id=call.message.chat.id, message_id=call.message.message_id)
+        bot.edit_message_text("🚫 البوت متوقف حالياً، شكراً لتفهمكم ❤", chat_id=call.message.chat.id, message_id=call.message.message_id)
         return
 
     user_id = call.from_user.id
@@ -94,21 +94,21 @@ def choose_game(call):
     orders['current'] = {'game': call.data, "step": "choose_game"}
     save_user_orders(user_id, orders)
 
-    game_name = "Pubg" if call.data == "pubg" else "Free"
-    price_label = "UC" if call.data == "pubg" else "ðŸ’Ž"
+    game_name = "PUBG" if call.data == "pubg" else "Free Fire"
+    price_label = "UC" if call.data == "pubg" else "💎"
     prices = prices_pubg if call.data == "pubg" else prices_freefire
 
     markup = types.InlineKeyboardMarkup()
     for amount, price in prices.items():
-        btn_text = f"ðŸ’Ž {game_name} {amount}{price_label}\nðŸ’° Ø§Ù„Ø³Ø¹Ø±: {price} Ù„.Ø³"
+        btn_text = f"💎 {game_name} {amount}{price_label}\n💰 السعر: {price} ل.س"
         markup.add(types.InlineKeyboardButton(btn_text, callback_data=amount))
 
-    bot.edit_message_text(f"ðŸŽ Ø¹Ø±ÙˆØ¶ {game_name} Ø§Ù„Ù…ØªÙˆÙÙ‘Ø±Ø©:\nØ§Ø®ØªØ± Ø¨Ø§Ù‚ØªÙƒ:", chat_id=user_id, message_id=call.message.message_id, reply_markup=markup)
+    bot.edit_message_text(f"🎁 عروض {game_name} المتوفّرة:\nاختر باقتك:", chat_id=user_id, message_id=call.message.message_id, reply_markup=markup)
 
 @bot.callback_query_handler(func=lambda call: call.data in prices_pubg or call.data in prices_freefire)
 def handle_selection(call):
     if not BOT_ACTIVE:
-        bot.edit_message_text("ðŸš« Ø§Ù„Ø¨ÙˆØª Ù…ØªÙˆÙ‚Ù Ø­Ø§Ù„ÙŠØ§Ù‹ØŒ Ù†Ø´ÙƒØ± ØªÙÙ‡Ù…ÙƒÙ… â¤ï¸", chat_id=call.message.chat.id, message_id=call.message.message_id)
+        bot.edit_message_text("🚫 البوت متوقف حالياً، شكراً لتفهمكم ❤", chat_id=call.message.chat.id, message_id=call.message.message_id)
         return
 
     user_id = call.from_user.id
@@ -123,12 +123,12 @@ def handle_selection(call):
     save_user_orders(user_id, orders)
 
     bot.edit_message_text(
-        f"ðŸ’° Ø§Ù„Ø³Ø¹Ø±: {prices[amount]} Ù„.Ø³\n\n"
-        f"ðŸ“Œ Ù‚Ù… Ø¨Ø¥Ø±Ø³Ø§Ù„ Ø§Ù„Ù…Ø¨Ù„Øº Ø§Ù„Ù…Ø·Ù„ÙˆØ¨ \"ØªØ­ÙˆÙŠÙ„ ÙŠØ¯ÙˆÙŠ Ø­ØµØ±Ø§Ù‹\" Ø¥Ù„Ù‰ Ø£Ø­Ø¯ Ø§Ù„Ø±Ù…ÙˆØ² Ø§Ù„ØªØ§Ù„ÙŠØ©:\n\n"
-        f"ØªØ­ÙˆÙŠÙ„ ÙŠØ¯ÙˆÙŠ â¬…              16954304\n"
-        f"ØªØ­ÙˆÙŠÙ„ ÙŠØ¯ÙˆÙŠ â¬…              81827789\n\n"
-        f"Ù…Ù„Ø§Ø­Ø¸Ø©ðŸš¨ : ÙŠØ±Ø¬Ù‰ Ø§Ø±Ø³Ø§Ù„ Ø§Ù„Ù…Ø¨Ù„Øº ØªØ­ÙˆÙŠÙ„ ÙŠØ¯ÙˆÙŠ ÙˆÙ„ÙŠØ³ Ø¯ÙØ¹ ÙŠØ¯ÙˆÙŠ\n\n"
-        f"Ø«Ù… Ø£Ø±Ø³Ù„ Ø±Ù‚Ù… Ø¹Ù…Ù„ÙŠØ© Ø§Ù„ØªØ­ÙˆÙŠÙ„:",
+        f"💰 السعر: {prices[amount]} ل.س\n\n"
+        f"📄 قم بإرسال المبلغ المطلوب \"تحويل يدوي حصراً\" إلى أحد الرموز التالية:\n\n"
+        f"تحويل يدوي 1️⃣  16954304\n"
+        f"تحويل يدوي 2️⃣  81827789\n\n"
+        f"ملحوظة⚠️ : يرجى إرسال المبلغ تحويل يدوي وليس دفع يدوي\n\n"
+        f"ثم أرسل رقم عملية التحويل:",
         chat_id=user_id,
         message_id=call.message.message_id
     )
@@ -137,7 +137,7 @@ def handle_selection(call):
 def get_transaction_number(message):
     user_id = message.from_user.id
     if not message.text.isdigit():
-        bot.send_message(user_id, "âš ï¸ Ø§Ù„Ø±Ø¬Ø§Ø¡ Ø¥Ø¯Ø®Ø§Ù„ Ø±Ù‚Ù… Ø§Ù„Ø¹Ù…Ù„ÙŠØ© Ø¨Ø´ÙƒÙ„ Ø±Ù‚Ù…ÙŠ ÙÙ‚Ø·.")
+        bot.send_message(user_id, "⚠️ الرجاء إدخال رقم العملية بشكل رقم فقط.")
         return bot.register_next_step_handler_by_chat_id(user_id, get_transaction_number)
 
     transaction_number = message.text
@@ -153,13 +153,13 @@ def get_transaction_number(message):
     orders['current'] = {}
     save_user_orders(user_id, orders)
 
-    bot.send_message(user_id, "ðŸ“ž Ø§Ù„Ø±Ø¬Ø§Ø¡ Ø¥Ø¯Ø®Ø§Ù„ Ø§Ù„Ø±Ù‚Ù… Ø§Ù„Ø°ÙŠ Ù‚Ù…Øª Ø¨Ø§Ù„ØªØ­ÙˆÙŠÙ„ Ø¹Ù„ÙŠÙ‡ (`16954304` Ø£Ùˆ `81827789`):")
+    bot.send_message(user_id, "🔒 الرجاء إدخال الرقم الذي تم بالتحويل عليه (`16954304` أو `81827789`):")
     bot.register_next_step_handler_by_chat_id(user_id, lambda msg: get_target_number(msg, transaction_number))
 
 def get_target_number(message, transaction_number):
     user_id = message.from_user.id
     if message.text not in ["16954304", "81827789"]:
-        bot.send_message(user_id, "âš ï¸ Ø§Ù„Ø±Ù‚Ù… ØºÙŠØ± ØµØ­ÙŠØ­ØŒ Ø§Ù„Ø±Ø¬Ø§Ø¡ Ø¥Ø¯Ø®Ø§Ù„ Ø£Ø­Ø¯ Ø§Ù„Ø±Ù‚Ù…ÙŠÙ† ÙÙ‚Ø·.")
+        bot.send_message(user_id, "⚠️ الرقم غير صحيح، الرجاء إدخال أحد الرقمين فقط.")
         return bot.register_next_step_handler_by_chat_id(user_id, lambda msg: get_target_number(msg, transaction_number))
 
     orders = get_user_orders(user_id)
@@ -167,13 +167,13 @@ def get_target_number(message, transaction_number):
     orders[transaction_number]["step"] = "target_number"
     save_user_orders(user_id, orders)
 
-    bot.send_message(user_id, "ðŸŽ® Ø£Ø±Ø³Ù„ Ø§Ù„Ø¢Ù† ID Ø­Ø³Ø§Ø¨Ùƒ Ø¯Ø§Ø®Ù„ Ø§Ù„Ù„Ø¹Ø¨Ø©:")
+    bot.send_message(user_id, "🎮 أرسل الـ ID حسابك داخل اللعبة:")
     bot.register_next_step_handler_by_chat_id(user_id, lambda msg: get_game_id(msg, transaction_number))
 
 def get_game_id(message, transaction_number):
     user_id = message.from_user.id
     if not message.text.isdigit():
-        bot.send_message(user_id, "âš ï¸ Ø§Ù„Ø±Ø¬Ø§Ø¡ Ø¥Ø¯Ø®Ø§Ù„ ID Ø§Ù„Ù„Ø¹Ø¨Ø© Ø¨Ø´ÙƒÙ„ Ø±Ù‚Ù…ÙŠ ÙÙ‚Ø·.")
+        bot.send_message(user_id, "⚠️ الرجاء إدخال ID اللعبة بشكل رقم فقط.")
         return bot.register_next_step_handler_by_chat_id(user_id, lambda msg: get_game_id(msg, transaction_number))
 
     orders = get_user_orders(user_id)
@@ -183,21 +183,21 @@ def get_game_id(message, transaction_number):
 
     markup = types.InlineKeyboardMarkup()
     markup.add(
-        types.InlineKeyboardButton("âœ… ØªÙ…Øª Ø§Ù„Ø¹Ù…Ù„ÙŠØ©", callback_data=f"confirm|{user_id}|{transaction_number}"),
-        types.InlineKeyboardButton("âŒ ÙØ´Ù„Øª Ø§Ù„Ø¹Ù…Ù„ÙŠØ©", callback_data=f"fail|{user_id}|{transaction_number}")
+        types.InlineKeyboardButton("✅ تمت العملية", callback_data=f"confirm|{user_id}|{transaction_number}"),
+        types.InlineKeyboardButton("❌ فشلت العملية", callback_data=f"fail|{user_id}|{transaction_number}")
     )
 
     bot.send_message(ADMIN_ID,
-        f"ðŸ†• Ø·Ù„Ø¨ Ø´Ø­Ù† Ø¬Ø¯ÙŠØ¯:\n"
-        f"ðŸ‘¤ Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù…: @{message.from_user.username or 'Ø¨Ø¯ÙˆÙ† ÙŠÙˆØ²Ø±'}\n"
-        f"ðŸ†” ØªÙŠÙ„ÙŠØ¬Ø±Ø§Ù…: {user_id}\n"
-        f"ðŸŽ® ID Ø§Ù„Ù„Ø¹Ø¨Ø©: {orders[transaction_number]['game_id']}\n"
-        f"ðŸŽ¯ Ø§Ù„ÙƒÙ…ÙŠØ©: {orders[transaction_number]['amount']} {orders[transaction_number]['game']}\n"
-        f"ðŸ“ž Ø§Ù„Ø±Ù‚Ù… Ø§Ù„Ù…Ø­ÙˆÙ‘Ù„ Ø¹Ù„ÙŠÙ‡: {orders[transaction_number]['target_number']}\n"
-        f"ðŸ”¢ Ø±Ù‚Ù… Ø§Ù„Ø¹Ù…Ù„ÙŠØ©: {transaction_number}",
+        f"📢 طلب شحن جديد:\n"
+        f"👤 المستخدم: @{message.from_user.username or 'بدون يوزر'}\n"
+        f"☎️ تيليجرام: {user_id}\n"
+        f"🎮 ID اللعبة: {orders[transaction_number]['game_id']}\n"
+        f"💎 الكمية: {orders[transaction_number]['amount']} {orders[transaction_number]['game']}\n"
+        f"🔒 رقم المحول عليه: {orders[transaction_number]['target_number']}\n"
+        f"📝 رقم العملية: {transaction_number}",
         reply_markup=markup
     )
-    bot.send_message(user_id, "âœ… ØªÙ… Ø§Ø³ØªÙ„Ø§Ù… Ù…Ø¹Ù„ÙˆÙ…Ø§ØªÙƒ Ø¨Ù†Ø¬Ø§Ø­! Ø³ÙŠØªÙ… ØªÙ†ÙÙŠØ° Ø·Ù„Ø¨Ùƒ Ù‚Ø±ÙŠØ¨Ù‹Ø§ ðŸ’š")
+    bot.send_message(user_id, "✅ تم استلام معلوماتك بنجاح! سيتم تنفيد طلبك قريباً 💎")
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("confirm|"))
 def confirm_delivery(call):
@@ -210,19 +210,19 @@ def confirm_delivery(call):
         data = orders.get(transaction_number)
 
         if not data:
-            bot.send_message(ADMIN_ID, f"âŒ Ù„Ù… ÙŠØªÙ… Ø§Ù„Ø¹Ø«ÙˆØ± Ø¹Ù„Ù‰ Ø¨ÙŠØ§Ù†Ø§Øª Ø§Ù„Ø·Ù„Ø¨ Ù„Ø±Ù‚Ù… Ø§Ù„Ø¹Ù…Ù„ÙŠØ©: {transaction_number}")
+            bot.send_message(ADMIN_ID, f"❌ لم يتم العثور على بيانات الطلب لرقم العملية: {transaction_number}")
             return
 
-        unit = "UC" if data["game"] == "pubg" else "ðŸ’Ž"
-        confirm_msg = f"ØªÙ… Ø´Ø­Ù† Ø­Ø³Ø§Ø¨Ùƒ Ø¨Ù€ {data['amount']} {unit} Ø¹Ù„Ù‰ Ø§Ù„Ù€ ID Ø§Ù„ØªØ§Ù„ÙŠ: ðŸ“±{data['game_id']} Ø¨Ù†Ø¬Ø§Ø­ âœ…  Ø´ÙƒØ±Ø§Ù‹ Ù„ØªØ¹Ø§Ù…Ù„Ùƒ Ù…Ø¹Ù†Ø§ ðŸŒŸ"
+        unit = "UC" if data["game"] == "pubg" else "💎"
+        confirm_msg = f"تم شحن حسابك بـ {data['amount']} {unit} على الـ ID التالي: 📝{data['game_id']} بنجاح ✅  شكراً لتعاملك معنا 🌟"
         bot.send_message(user_id, confirm_msg)
-        bot.send_message(ADMIN_ID, f"ðŸ“¦ ØªÙ… Ø§Ù„Ø´Ø­Ù† Ø¥Ù„Ù‰ Ø±Ù‚Ù… Ø§Ù„Ø¹Ù…Ù„ÙŠØ©: {transaction_number}")
+        bot.send_message(ADMIN_ID, f"📣 تم الشحن إلى رقم العملية: {transaction_number}")
 
         del orders[transaction_number]
         save_user_orders(user_id, orders)
 
     except Exception as e:
-        bot.send_message(ADMIN_ID, f"â— Ø­Ø¯Ø« Ø®Ø·Ø£ Ø£Ø«Ù†Ø§Ø¡ ØªØ£ÙƒÙŠØ¯ Ø§Ù„Ø¹Ù…Ù„ÙŠØ©: {e}")
+        bot.send_message(ADMIN_ID, f"❌ حدث خطأ أثناء تأكيد العملية: {e}")
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("fail|"))
 def fail_delivery(call):
@@ -231,13 +231,13 @@ def fail_delivery(call):
     _, user_id_str, transaction_number = call.data.split("|", 2)
     user_id = int(user_id_str)
     markup = types.InlineKeyboardMarkup()
-    markup.add(types.InlineKeyboardButton("â–¶ï¸ Ù„Ø¥Ø¹Ø§Ø¯Ø© Ø§Ù„Ù…Ø­Ø§ÙˆÙ„Ø© Ø§Ø¶ØºØ· start", callback_data='retry'))
-    bot.send_message(user_id, "âŒ ÙØ´Ù„Øª Ø§Ù„Ø¹Ù…Ù„ÙŠØ©\nÙŠØ±Ø¬Ù‰ Ø§Ù„ØªØ£ÙƒØ¯ Ù…Ù† ØµØ­Ø© Ø§Ù„Ù…Ø¹Ù„ÙˆÙ…Ø§ØªØŒ Ø«Ù… Ø§Ø¶ØºØ· /start Ù„Ø¥Ø¹Ø§Ø¯Ø© Ø§Ù„Ù…Ø­Ø§ÙˆÙ„Ø©.", reply_markup=markup)
+    markup.add(types.InlineKeyboardButton("🔄 لإعادة المحاولة اضغط start", callback_data='retry'))
+    bot.send_message(user_id, "❌ فشلت العملية\nيرجى التأكد من صحة المعلومات، ثم اضغط /start لإعادة المحاولة.", reply_markup=markup)
 
 @bot.callback_query_handler(func=lambda call: call.data == 'retry')
 def retry_order(call):
     if not BOT_ACTIVE:
-        bot.edit_message_text("ðŸš« Ø§Ù„Ø¨ÙˆØª Ù…ØªÙˆÙ‚Ù Ø­Ø§Ù„ÙŠØ§Ù‹ØŒ Ù†Ø´ÙƒØ± ØªÙÙ‡Ù…ÙƒÙ… â¤ï¸", chat_id=call.message.chat.id, message_id=call.message.message_id)
+        bot.edit_message_text("🚫 البوت متوقف حالياً، شكراً لتفهمكم ❤", chat_id=call.message.chat.id, message_id=call.message.message_id)
         return
     orders = get_user_orders(call.from_user.id)
     orders['current'] = {"step": "start"}
@@ -248,9 +248,9 @@ def retry_order(call):
 def filter_spam_messages(message):
     if not BOT_ACTIVE:
         return
-    spam_keywords = ["http", "https", "www", "t.me", ".com", ".me", "â‚¹", "free", "click", "promo", "join", "channel", "offer", "mil jayga"]
+    spam_keywords = ["http", "https", "www", "t.me", ".com", ".me", "₹", "free", "click", "promo", "join", "channel", "offer", "mil jayga"]
     if any(word in message.text.lower() for word in spam_keywords):
-        bot.reply_to(message, "ðŸš« ÙŠÙ…Ù†Ø¹ Ø¥Ø±Ø³Ø§Ù„ Ø§Ù„Ø±ÙˆØ§Ø¨Ø· Ø£Ùˆ Ø§Ù„Ø±Ø³Ø§Ø¦Ù„ Ø§Ù„Ø¯Ø¹Ø§Ø¦ÙŠØ© Ø¯Ø§Ø®Ù„ Ø§Ù„Ø¨ÙˆØª.")
+        bot.reply_to(message, "🚫 يمنع إرسال الروابط أو الرسائل الدعائية داخل البوت.")
         return
     current_step = None
     orders = get_user_orders(message.from_user.id)
@@ -264,7 +264,7 @@ def filter_spam_messages(message):
                     break
     allowed_steps = ["transaction_number", "target_number", "game_id"]
     if current_step not in allowed_steps:
-        bot.reply_to(message, "â— ÙŠØ±Ø¬Ù‰ Ø§Ø³ØªØ®Ø¯Ø§Ù… Ø§Ù„Ø£Ø²Ø±Ø§Ø± ÙÙ‚Ø· Ù„Ù„ØªØ¹Ø§Ù…Ù„ Ù…Ø¹ Ø§Ù„Ø¨ÙˆØª.")
+        bot.reply_to(message, "❌ يرجى استخدام الأزرار فقط للتعامل مع البوت.")
         return
 
 bot.infinity_polling()
